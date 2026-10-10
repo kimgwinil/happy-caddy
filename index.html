@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Happy Caddy 설치</title>
+<meta name="description" content="골프 해피게임 앱 Happy Caddy · 안드로이드, 아이폰, 윈도우, 맥">
+<meta property="og:title" content="Happy Caddy · 골프 해피게임 앱">
+<meta property="og:description" content="누르면 내 기기에 맞는 설치 화면이 열립니다">
+<meta property="og:image" content="/app/icons/icon-512.png">
+<meta name="theme-color" content="#1d6a3d">
+<link rel="icon" href="/app/icons/favicon-32.png">
+<link rel="apple-touch-icon" href="/app/icons/apple-touch-icon.png">
+<style>
+:root{--bg:#eef3ee;--card:#fff;--ink:#122419;--muted:#4f6256;--line:#cfdad1;--green:#1d6a3d;--soft:#dcefe2;--flag:#fff3c4}
+@media (prefers-color-scheme:dark){:root{--bg:#0c1611;--card:#14231a;--ink:#eef5f0;--muted:#a5b8ab;--line:#2a4232;--green:#55c482;--soft:#183a26;--flag:#3a3212}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:18px/1.5 "Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",system-ui,sans-serif;word-break:keep-all;overflow-wrap:anywhere}
+header{background:linear-gradient(160deg,#3c9d63,#1d6a3d 55%,#12452a);color:#fff;padding:36px 20px 28px;text-align:center}
+header img{width:96px;height:96px;border-radius:22px;box-shadow:0 4px 14px rgba(0,0,0,.3)}
+h1{margin:12px 0 4px;font-size:2rem;letter-spacing:.03em}h1 span{color:#ffd54a}
+header p{margin:0;opacity:.95}
+main{max-width:560px;margin:0 auto;padding:16px;display:flex;flex-direction:column;gap:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:12px}
+.card h2{margin:0;font-size:1.25rem}
+.btn{display:block;text-align:center;text-decoration:none;font-weight:800;font-size:1.2rem;border-radius:14px;padding:16px;background:var(--green);color:#fff;border:0;width:100%;cursor:pointer;font-family:inherit}
+.btn.ghost{background:transparent;color:var(--green);border:2px solid var(--green)}
+.btn[aria-disabled=true]{opacity:.45;pointer-events:none}
+ol{margin:0;padding-left:1.3em}li{margin:4px 0}
+.sub{color:var(--muted);font-size:.95rem;margin:0}
+.warn{background:var(--flag);border-radius:12px;padding:12px 14px}
+.mine{border:3px solid var(--green)}
+.tag{display:inline-block;background:var(--soft);color:var(--green);font-weight:800;font-size:.85rem;border-radius:999px;padding:2px 10px;margin-left:6px;vertical-align:middle}
+details{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px 18px}
+summary{font-weight:800;cursor:pointer}
+details .card{border:0;padding:12px 0 0}
+footer{text-align:center;color:var(--muted);font-size:.85rem;padding:20px 16px 40px}
+</style>
+</head>
+<body>
+<header>
+  <img src="/app/icons/icon-512.png" alt="Happy Caddy 골프공 아이콘">
+  <h1>HAPPY <span>CADDY</span></h1>
+  <p>골프 해피게임 · 4인 18홀 상금 계산과 자동 정산</p>
+</header>
+<main id="main"></main>
+<footer>Happy Caddy 1.0.0</footer>
+<script>
+// 설치 파일 주소. 비어 있으면 '준비 중'으로 보입니다.
+var DL = {
+  android: 'https://github.com/kimgwinil/happy-caddy/raw/main/downloads/HappyCaddy-Android-1.0.0.apk',
+  windows: 'https://github.com/kimgwinil/happy-caddy/raw/main/downloads/HappyCaddy-Windows-Setup-1.0.0.exe',
+  macArm: 'https://github.com/kimgwinil/happy-caddy/raw/main/downloads/HappyCaddy-Mac-AppleChip-1.0.0.zip',
+  macIntel: 'https://github.com/kimgwinil/happy-caddy/raw/main/downloads/HappyCaddy-Mac-Intel-1.0.0.zip'
+};
+var ua = navigator.userAgent;
+var isKakao = /KAKAOTALK/i.test(ua);
+var isIOS = /iPhone|iPad|iPod/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+var isAndroid = /Android/i.test(ua);
+var isWin = /Windows/i.test(ua);
+var isMac = !isIOS && /Macintosh|Mac OS X/i.test(ua);
+var me = isIOS ? 'ios' : isAndroid ? 'android' : isWin ? 'windows' : isMac ? 'mac' : 'other';
+
+function btn(href, label, ghost) {
+  return href ? '<a class="btn' + (ghost ? ' ghost' : '') + '" href="' + href + '" download>' + label + '</a>'
+              : '<a class="btn' + (ghost ? ' ghost' : '') + '" aria-disabled="true">' + label + ' (준비 중)</a>';
+}
+var webBtn = '<a class="btn ghost" href="/app/">설치 없이 바로 쓰기</a>';
+var cards = {
+  android: '<section class="card" id="android"><h2>🤖 안드로이드 폰</h2>' + btn(DL.android, '안드로이드 앱 내려받기') +
+    '<ol><li>내려받은 <b>HappyCaddy</b> 파일을 누릅니다.</li><li>"출처를 알 수 없는 앱" 안내가 나오면 <b>설정 → 이 출처 허용</b>을 켭니다.</li><li><b>설치</b>를 누르면 골프공 아이콘이 생깁니다.</li></ol>' +
+    '<p class="sub">Play 스토어 앱이 아니어서 "안전하지 않을 수 있음" 경고가 나올 수 있습니다. 그래도 설치를 누르시면 됩니다.</p>' + webBtn + '</section>',
+  ios: '<section class="card" id="ios"><h2>🍎 아이폰 · 아이패드</h2><p>아이폰은 앱스토어 밖의 설치 파일을 받지 않아서, 아래 방법으로 홈 화면에 앱을 만듭니다.</p>' +
+    '<a class="btn" href="/app/">앱 열기</a><ol><li>Safari로 연 화면 아래쪽 <b>공유 버튼(□↑)</b>을 누릅니다.</li><li><b>홈 화면에 추가</b>를 누릅니다.</li><li>홈 화면에 골프공 아이콘이 생깁니다.</li></ol></section>',
+  windows: '<section class="card" id="windows"><h2>🪟 윈도우 컴퓨터</h2>' + btn(DL.windows, '윈도우 설치 파일 내려받기') +
+    '<ol><li>내려받은 파일을 실행하면 바로 설치되고 바탕화면에 아이콘이 생깁니다.</li><li>"Windows의 PC 보호" 창이 뜨면 <b>추가 정보 → 실행</b>을 누릅니다.</li></ol>' + webBtn + '</section>',
+  mac: '<section class="card" id="mac"><h2>💻 맥 컴퓨터</h2>' + btn(DL.macArm, '맥 앱 내려받기 (애플칩 M1~)') + btn(DL.macIntel, '맥 앱 내려받기 (인텔)', true) +
+    '<ol><li>내려받은 파일을 열면 <b>Happy Caddy</b> 앱이 나옵니다. 응용 프로그램 폴더로 옮깁니다.</li><li>처음 열 때 경고가 나오면 <b>시스템 설정 → 개인정보 보호 및 보안 → 그래도 열기</b>를 누릅니다.</li></ol>' +
+    '<p class="sub">애플칩인지 모르시면 화면 왼쪽 위 사과 → "이 Mac에 관하여"에서 칩 이름을 확인하세요. 2021년 이후 맥은 대부분 애플칩입니다.</p>' + webBtn + '</section>'
+};
+var html = '';
+if (isKakao) {
+  html += '<section class="card warn"><h2>💬 카카오톡 안에서 여셨네요</h2><p>카카오톡 화면에서는 설치가 잘 되지 않습니다. 아래 버튼으로 Chrome이나 Safari에서 여세요.</p>' +
+    '<a class="btn" href="kakaotalk://web/openExternal?url=' + encodeURIComponent(location.href) + '">Chrome·Safari로 열기</a></section>';
+}
+if (cards[me]) html += cards[me].replace('class="card"', 'class="card mine"').replace('</h2>', '<span class="tag">내 기기</span></h2>');
+else html += '<section class="card"><h2>⛳ 바로 쓰기</h2><a class="btn" href="/app/">앱 열기</a></section>';
+var others = Object.keys(cards).filter(function (k) { return k !== me; }).map(function (k) { return cards[k]; }).join('');
+html += '<details><summary>다른 기기용 설치 방법</summary>' + others + '</details>';
+document.getElementById('main').innerHTML = html;
+</script>
+</body>
+</html>
