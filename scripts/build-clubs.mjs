@@ -49,7 +49,7 @@ foreach.cities->.c(
 );`;
 
 async function overpass(QUERY = QUERY_CLUBS, min = 100) {
-  for (let round = 0; round < 3; round++) {
+  for (let round = 0; round < 8; round++) {
     for (const url of MIRRORS) {
       try {
         const r = await fetch(url, { method: 'POST', body: 'data=' + encodeURIComponent(QUERY),
@@ -60,7 +60,7 @@ async function overpass(QUERY = QUERY_CLUBS, min = 100) {
         if (r.ok) { const d = JSON.parse(txt); if ((d.elements || []).length > min) return d; }
       } catch (e) { console.log(url, String(e)); }
     }
-    await new Promise(r => setTimeout(r, 30000));
+    await new Promise(r => setTimeout(r, 60000 + round * 30000));
   }
   throw new Error('Overpass unavailable');
 }
