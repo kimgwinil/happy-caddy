@@ -1,6 +1,6 @@
 // 전국 골프장 목록을 OpenStreetMap(Overpass)에서 받아 app/data/clubs.json 으로 저장합니다.
 // GitHub Actions(.github/workflows/clubs.yml)가 매달 실행합니다. 데이터 © OpenStreetMap 기여자 (ODbL).
-import { writeFileSync, mkdirSync } from 'node:fs';
+import { writeFileSync, mkdirSync, readFileSync } from 'node:fs';
 
 const MIRRORS = ['https://overpass-api.de/api/interpreter', 'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
   'https://overpass.kumi.systems/api/interpreter', 'https://overpass.private.coffee/api/interpreter'];
@@ -27,6 +27,17 @@ foreach->.c(
   .c map_to_area->.a;
   way[golf=hole](area.a);
   out tags;
+);`;
+
+// 시·군·구(admin_level=6)마다 그 안의 골프장을 받습니다. 지역 이름(예: 용인, 가평)으로 찾기 위해 씁니다.
+const CITIES = `[out:json][timeout:900];
+area["ISO3166-1"="KR"][admin_level=2]->.kr;
+rel(area.kr)[boundary=administrative][admin_level=6];
+map_to_area->.cities;
+foreach.cities->.c(
+  .c out tags;
+  nwr[leisure=golf_course](area.c);
+  out ids tags;
 );`;
 
 async function overpass(QUERY = QUERY_CLUBS, min = 100) {
@@ -84,6 +95,21 @@ try {
   }
   console.log('holes', nHoles, 'courses with holes', [...holeInfo.values()].filter(c => c.holes.length).length);
 } catch (e) { console.log('holes query failed', String(e)); }
+// 골프장 → 시·군 이름. 받기에 실패하면 지난번 자료의 시·군을 그대로 씁니다.
+const cityOf = new Map();
+try { for (const x of JSON.parse(readFileSync('app/data/clubs.json', 'utf8')).list) if (x.c) cityOf.set(x.n.replace(/\s/g, ''), x.c); } catch {}
+try {
+  const cd = await overpass(CITIES, 100); let city = '', n = 0;
+  for (const el of cd.elements) {
+    const tg = el.tags || {};
+    if (el.type === 'area') { city = clean(tg['name:ko'] || tg.name).replace(/^.*\s/, ''); continue; }
+    if (!city) continue;
+    cityOf.set(el.type + el.id, city);
+    const nm = clean(tg['name:ko'] || tg.name).replace(/\s*클럽하우스$/, '').replace(/\s/g, '');
+    if (nm) { cityOf.set(nm, city); n++; }
+  }
+  console.log('city matches', n);
+} catch (e) { console.log('city query failed', String(e)); }
 const seen = new Map(); let region = '';
 for (const el of data.elements) {
   const tg = el.tags || {};
@@ -93,9 +119,11 @@ for (const el of data.elements) {
   const site = clean(tg.website || tg['contact:website'] || tg.url);
   const key = name.replace(/\s/g, '');
   const prev = seen.get(key);
-  if (prev) { if (!prev.w && site) prev.w = site; continue; }
+  if (prev) { if (!prev.w && site) prev.w = site; if (!prev.c && cityOf.get(el.type + el.id)) prev.c = cityOf.get(el.type + el.id); continue; }
   const c = el.center || el, en = clean(tg['name:en']);
   const o = { n: name, r: region };
+  const city = cityOf.get(el.type + el.id) || cityOf.get(key);
+  if (city) o.c = city;
   if (site) o.w = site;
   if (en && en !== name) o.en = en;
   if (c.lat) { o.la = +c.lat.toFixed(4); o.lo = +c.lon.toFixed(4); }
@@ -107,4 +135,4 @@ for (const el of data.elements) {
 const list = [...seen.values()].sort((a, b) => a.n.localeCompare(b.n, 'ko'));
 mkdirSync('app/data', { recursive: true });
 writeFileSync('app/data/clubs.json', JSON.stringify({ v: 1, src: 'OpenStreetMap contributors (ODbL)', at: new Date().toISOString().slice(0, 10), n: list.length, list }));
-console.log('clubs', list.length, 'with website', list.filter(x => x.w).length, 'with holes', list.filter(x => x.h).length, 'with courses', list.filter(x => x.cs).length);
+console.log('clubs', list.length, 'with website', list.filter(x => x.w).length, 'with holes', list.filter(x => x.h).length, 'with courses', list.filter(x => x.cs).length, 'with city', list.filter(x => x.c).length);
