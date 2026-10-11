@@ -38,6 +38,8 @@ const T = {
   site: ['골프장 홈페이지', 'Club homepage', 'ゴルフ場ホームページ', '球场主页'],
   sitePh: ['예: www.skyhill.co.kr', 'e.g. www.example-cc.co.kr', '例: www.example-cc.co.kr', '例: www.example-cc.co.kr'],
   siteHelp: ['홈페이지 첫 화면의 사진이 배경으로 나옵니다. 사진은 저장하지 않고 홈페이지에서 바로 불러옵니다.', "The homepage's main photo becomes the background. It is loaded from the club's site, not copied.", 'ホームページのメイン写真が背景になります（コピーせず直接読み込み）。', '主页首图将作为背景（直接从主页加载，不复制）。'],
+  photoPick: ['홈페이지에서 찾은 사진입니다. 배경으로 쓸 사진을 눌러 고르세요.', 'Photos from the homepage. Tap one to use as the background.', 'ホームページの写真です。背景にする写真を選んでください。', '主页上的照片，点选一张作为背景。'],
+  photoFind: ['홈페이지에서 사진을 찾는 중…', 'Looking for photos on the homepage…', 'ホームページの写真を探しています…', '正在主页上查找照片…'],
   noPhoto: ['홈페이지에서 사진을 찾지 못했습니다.', 'No photo found on the homepage.', 'ホームページに写真が見つかりません。', '主页上没有找到照片。'],
   coursesReg: ['등록된 코스', 'Registered courses', '登録済みコース', '已登记球道'],
   noCourses: ['아직 등록된 코스가 없습니다. 아래에서 9홀씩 추가하세요.', 'No courses yet. Add them below, 9 holes each.', 'まだコースがありません。下で9ホールずつ追加してください。', '还没有球道，请在下方按9洞添加。'],
@@ -263,7 +265,12 @@ function club(name = S.club) { const o = clubs(); return o[name] || null; }
 function putClub(name, patch) { const o = clubs(); o[name] = Object.assign({ w: '', r: '', cs: [] }, o[name], patch, { at: Date.now() }); saveClubs(o); return o[name]; }
 function siteOf(name = S.club) { const c = club(name); return (c && c.w) || (name === S.club ? S.site : '') || ''; }
 // 배경: 등록한 골프장의 홈페이지 첫 화면 사진만 씁니다(서버가 주소만 찾아 주고, 사진은 홈페이지에서 직접 불러옴).
-function photoCss() { const w = S.club ? siteOf() : VIEW ? S.site : ''; return w ? ` style="--hero:url('${API}/photo?site=${encodeURIComponent(w)}')"` : ''; }
+function photoUrl() {
+  if (!S.club) return VIEW && S.site ? API + '/photo?site=' + encodeURIComponent(S.site) : '';
+  const c = club(), w = siteOf(); if (!w) return '';
+  return c && c.img ? c.img : API + '/photo?site=' + encodeURIComponent(w);
+}
+function photoCss() { const u = photoUrl(); return u ? ` style="--hero:url('${u.replace(/'/g, '%27').replace(/"/g, '%22')}')"` : ''; }
 function courseLabel() { return S.club ? S.club + (S.front && S.back ? ' · ' + (S.front === S.back ? S.front : S.front + '→' + S.back) : '') : ''; }
 
 // 전국 골프장 목록 (OpenStreetMap 기반 data/clubs.json, 기기에 30일 보관)
@@ -389,7 +396,7 @@ function vClub() {
   return hero(false) + `
   <section class="card"><div class="clubnow"><b>${esc(S.club)}</b>${c.r ? `<span>${esc(c.r)}</span>` : ''}</div>
     <label><span class="lbl">${t('site')}</span><input type="url" inputmode="url" data-in="site" value="${esc(c.w)}" placeholder="${esc(t('sitePh'))}" maxlength="120" autocomplete="off"></label>
-    <p class="sub">${t('siteHelp')}</p><p class="sub" id="photoNote"></p></section>
+    <p class="sub">${t('siteHelp')}</p><div id="photoNote">${photoPicker()}</div></section>
   <section class="card"><span class="lbl">${t('coursesReg')}</span>
     ${c.cs.length ? c.cs.map((x, i) => `<div class="crow"><button class="cname" data-act="cEdit" data-v="${i}">${esc(x.n)}</button>${parStrip(x.p)}
       <button class="btn ghost small" data-act="cDel" data-v="${i}">${armed === 'cDel' + i ? t('delSure') : t('delC')}</button></div>`).join('') : `<p class="sub">${t('noCourses')}</p>`}
@@ -410,10 +417,23 @@ function vClub() {
   <button class="btn" data-act="cUse">${t('useCourses')}</button>` : ''}
   <button class="btn ghost" data-act="back">${t('toSetup')}</button>`;
 }
-function checkPhoto() {
-  const w = siteOf(), el = document.getElementById('photoNote'); if (!w || !el) return;
-  fetch(API + '/photo?json=1&site=' + encodeURIComponent(w)).then(r => r.json()).then(d => { const e2 = document.getElementById('photoNote'); if (e2) e2.textContent = d.img ? '' : t('noPhoto'); }).catch(() => {});
+// 홈페이지에서 찾은 사진 후보를 보여 주고, 사용자가 배경으로 쓸 사진을 고릅니다.
+let PHOTOS = { site: '', imgs: null };
+function photoPicker() {
+  const w = siteOf(), c = club() || {}; if (!w) return '';
+  if (PHOTOS.site !== w || !PHOTOS.imgs) return `<p class="sub">${t('photoFind')}</p>`;
+  if (!PHOTOS.imgs.length) return `<p class="sub">${t('noPhoto')}</p>`;
+  const cur = c.img || PHOTOS.imgs[0];
+  return `<p class="sub">${t('photoPick')}</p><div class="thumbs">${PHOTOS.imgs.map(u => `<button class="thumb ${u === cur ? 'on' : ''}" data-act="pickImg" data-u="${esc(u)}"><img src="${esc(u)}" alt="" loading="lazy" referrerpolicy="no-referrer"></button>`).join('')}</div>`;
 }
+function checkPhoto() {
+  const w = siteOf(); if (!w || (PHOTOS.site === w && PHOTOS.imgs)) return;
+  PHOTOS = { site: w, imgs: null };
+  fetch(API + '/photo?json=1&list=1&site=' + encodeURIComponent(w)).then(r => r.json()).catch(() => ({}))
+    .then(d => { if (PHOTOS.site !== w) return; PHOTOS.imgs = d.imgs || (d.img ? [d.img] : []); const el = document.getElementById('photoNote'); if (el) el.innerHTML = photoPicker(); });
+}
+// 열리지 않는 사진은 목록에서 숨깁니다.
+document.addEventListener('error', e => { const b = e.target.closest && e.target.closest('.thumb'); if (b) b.remove(); }, true);
 
 function slots(ord) { return [0, 1, 2, 3].map(i => ord[i] == null ? `<div class="slot empty"><span class="n">${i + 1}</span>…</div>` : `<div class="slot"><span class="n">${i + 1}</span>${esc(nm(ord[i]))}</div>`).join(''); }
 function vDraw() {
@@ -624,7 +644,7 @@ document.addEventListener('change', e => {
   const k = e.target.dataset.in;
   if (k === 'site') {
     let w = e.target.value.trim().replace(/\s/g, ''); if (w && !/^https?:\/\//i.test(w)) w = 'https://' + w;
-    putClub(S.club, { w }); S.site = w; save(); render();
+    putClub(S.club, { w, img: '' }); S.site = w; save(); render();
   }
 });
 document.addEventListener('click', async e => {
@@ -662,6 +682,7 @@ document.addEventListener('click', async e => {
       if (!S.front) S.front = item.n; else if (!S.back) S.back = item.n;
       DRAFT = null; toast(t('savedOk')); break;
     }
+    case 'pickImg': putClub(S.club, { img: b.dataset.u }); break;
     case 'cFront': S.front = b.dataset.n; break;
     case 'cBack': S.back = b.dataset.n; break;
     case 'cUse': if (!applyCourses()) { toast(t('pickBoth')); return; } S.phase = 'setup'; break;
@@ -694,7 +715,7 @@ document.addEventListener('click', async e => {
     case 'openExternal': location.href = 'kakaotalk://web/openExternal?url=' + encodeURIComponent(location.href); return;
     case 'exitView': VIEW = false; try { history.replaceState(null, '', location.pathname); } catch (err) {} S = load() || fresh(); break;
   }
-  save(); render(); if (!['inc', 'dec', 'par', 'holder', 'parHere', 'nick', 'pick', 'lang', 'mode', 'unit', 'dpar', 'cQuick', 'cFront', 'cBack', 'cDel'].includes(a)) window.scrollTo(0, 0);
+  save(); render(); if (!['inc', 'dec', 'par', 'holder', 'parHere', 'nick', 'pick', 'lang', 'mode', 'unit', 'dpar', 'cQuick', 'cFront', 'cBack', 'cDel', 'pickImg'].includes(a)) window.scrollTo(0, 0);
 });
 window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; if (S.phase === 'setup') render(); });
 

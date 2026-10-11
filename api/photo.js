@@ -2,6 +2,7 @@
 // 사진은 복사·저장하지 않고 브라우저가 홈페이지에서 직접 불러옵니다.
 // 사용법: /api/photo?site=https://www.example-cc.co.kr  →  302 로 홈페이지 사진 주소
 //         /api/photo?site=...&json=1                     →  { img: "..." }
+//         /api/photo?site=...&json=1&list=1              →  { img, imgs: [후보 사진 8장] }
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36';
 const BAD = /logo|icon|(^|[\/_-])ico[_.-]|favicon|btn|button|sns|qr|banner_?s|bnr|popup|pop_|layer|notice|event|board|bbs|upload|arrow|blank|spacer|loading|symbol|_ci[._]|\/ci[._/]|kakao|naver|facebook|insta|youtube|thumb|award|map|txt|text|tit/i;
 const GOOD = /main|visual|vis[_-]|slide|swiper|hero|key|mv[_-]?\d|bg|course|intro|top/i;
@@ -62,7 +63,8 @@ async function find(site, debug) {
   const seen = new Set(); list = list.filter(c => !seen.has(c.u) && seen.add(c.u));
   list.forEach(c => c.s = score(c)); list.sort((a, b) => b.s - a.s);
   const best = list.find(c => c.s >= 1);
-  return debug ? { img: best ? best.u : '', top: list.slice(0, 8) } : { img: best ? best.u : '' };
+  const imgs = list.filter(c => c.s >= 1).slice(0, 8).map(c => c.u);
+  return debug ? { img: best ? best.u : '', imgs, top: list.slice(0, 8) } : { img: best ? best.u : '', imgs };
 }
 
 module.exports = async (req, res) => {
@@ -77,6 +79,6 @@ module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   if (!out.img) { res.setHeader('Cache-Control', 'public, s-maxage=86400'); res.status(req.query.json || req.query.debug ? 200 : 404).json(out); return; }
   res.setHeader('Cache-Control', 'public, s-maxage=2592000, stale-while-revalidate=2592000');
-  if (req.query.json || req.query.debug) { res.status(200).json(out); return; }
+  if (req.query.json || req.query.debug) { if (!req.query.debug && !req.query.list) delete out.imgs; res.status(200).json(out); return; }
   res.setHeader('Location', out.img); res.status(302).end();
 };
