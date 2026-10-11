@@ -71,7 +71,14 @@ async function find(site, debug) {
   const photos = list.filter(c => c.k === 'photo' && c.s >= 1).slice(0, 6);
   const mascots = list.filter(c => c.k === 'mascot').slice(0, 2);
   const logos = list.filter(c => c.k === 'logo').sort((a, b) => (/\.svg/i.test(a.u) ? 1 : 0) - (/\.svg/i.test(b.u) ? 1 : 0)).slice(0, 2);
-  const ranked = photos.concat(mascots, logos);
+  let ranked = photos.concat(mascots, logos).filter(c => !/\/\/(www\.)?(domain|example)\./i.test(c.u));
+  // 아무것도 없으면 홈페이지 아이콘(로고)이라도 씁니다.
+  if (!ranked.length) {
+    const ic = [...html.matchAll(/<link[^>]+rel=["'](?:apple-touch-icon|icon|shortcut icon)["'][^>]*>/gi)]
+      .map(m => { const h = m[0].match(/href=["']([^"']+)["']/i); const z = m[0].match(/sizes=["'](\d+)/i); return h ? { u: abs(h[1], url), n: z ? +z[1] : 0 } : null; })
+      .filter(x => x && /\.(png|jpe?g|svg)(\?|$)/i.test(x.u)).sort((a, b) => b.n - a.n);
+    ranked = ic.slice(0, 1).map(x => ({ u: x.u, k: 'logo' }));
+  }
   const imgs = ranked.map(c => c.u), best = ranked[0];
   return debug ? { img: best ? best.u : '', imgs, top: list.slice(0, 8) } : { img: best ? best.u : '', imgs };
 }

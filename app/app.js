@@ -37,7 +37,7 @@ const T = {
   clubEdit: ['코스 등록·선택', 'Register / pick courses', 'コース登録・選択', '登记/选择球道'],
   site: ['골프장 홈페이지', 'Club homepage', 'ゴルフ場ホームページ', '球场主页'],
   sitePh: ['예: www.skyhill.co.kr', 'e.g. www.example-cc.co.kr', '例: www.example-cc.co.kr', '例: www.example-cc.co.kr'],
-  siteHelp: ['홈페이지 첫 화면의 사진이 배경으로 나옵니다. 사진은 저장하지 않고 홈페이지에서 바로 불러옵니다.', "The homepage's main photo becomes the background. It is loaded from the club's site, not copied.", 'ホームページのメイン写真が背景になります（コピーせず直接読み込み）。', '主页首图将作为背景（直接从主页加载，不复制）。'],
+  siteHelp: ['홈페이지에서 골프장 사진을 먼저 찾고, 없으면 마스코트나 로고를 배경으로 씁니다. 사진은 저장하지 않고 홈페이지에서 바로 불러옵니다.', "We use the club's photo from its homepage, or its mascot or logo if there is none. Images load from the club's site and are not copied.", 'ホームページのゴルフ場写真、なければマスコットやロゴを背景にします（コピーせず直接読み込み）。', '优先使用主页上的球场照片，没有时用吉祥物或标志（直接从主页加载，不复制）。'],
   clubStep: ['아래에서 이 골프장의 코스를 9홀씩 등록하세요. 코스 이름을 넣고(예: 동코스) 홀별 파를 눌러 맞춘 뒤 저장합니다.', 'Register this club\'s courses below, 9 holes each: name the course, tap each par, then save.', '下でこのゴルフ場のコースを9ホールずつ登録してください。', '请在下方按9洞登记该球场的球道。'],
   clubStepHas: ['오늘 칠 전반·후반 코스를 고르고 "이 코스로 정하기"를 누르세요. 코스를 더 등록할 수도 있습니다.', 'Pick today\'s front and back nine, then tap "Use these courses". You can add more courses below.', '今日の前半・後半コースを選んでください。', '请选择今天的前9洞和后9洞。'],
   photoT: ['배경 사진', 'Background photo', '背景写真', '背景照片'],
@@ -439,9 +439,23 @@ function checkPhoto() {
     .then(d => {
       if (PHOTOS.site !== w) return; PHOTOS.imgs = d.imgs || (d.img ? [d.img] : []);
       // 아직 고른 사진이 없으면 첫 번째(골프장 사진 > 마스코트 > 로고)를 배경으로 씁니다.
-      const c = club(); if (c && !c.img && PHOTOS.imgs.length && siteOf() === w) { putClub(S.club, { img: PHOTOS.imgs[0] }); if (S.phase === 'club') { render(); return; } }
       const el = document.getElementById('photoNote'); if (el) el.innerHTML = photoPicker();
+      const c = club(); if (c && !c.img && PHOTOS.imgs.length) firstLoading(PHOTOS.imgs).then(u => {
+        const c2 = club(); if (!u || !c2 || c2.img || siteOf() !== w) return;
+        putClub(S.club, { img: u });
+        // 입력 중인 칸이 있으면 화면 전체를 다시 그리지 않고 배경과 사진 목록만 바꿉니다.
+        const h = document.querySelector('header.hero:not(.slim)'); if (h && (S.phase === 'club' || S.phase === 'setup')) h.outerHTML = hero(false);
+        const e3 = document.getElementById('photoNote'); if (e3) e3.innerHTML = photoPicker();
+      });
     });
+}
+// 후보 중 실제로 열리는 첫 사진을 찾습니다.
+function firstLoading(list) {
+  return list.reduce((pr, u) => pr.then(found => found || new Promise(res => {
+    const im = new Image(); im.referrerPolicy = 'no-referrer';
+    const tm = setTimeout(() => res(''), 6000);
+    im.onload = () => { clearTimeout(tm); res(im.naturalWidth > 1 ? u : ''); }; im.onerror = () => { clearTimeout(tm); res(''); }; im.src = u;
+  })), Promise.resolve(''));
 }
 // 열리지 않는 사진은 목록에서 숨깁니다.
 document.addEventListener('error', e => { const b = e.target.closest && e.target.closest('.thumb'); if (b) b.remove(); }, true);
@@ -653,7 +667,7 @@ document.addEventListener('input', e => {
 });
 document.addEventListener('keydown', e => {
   if (e.key !== 'Enter' || e.isComposing) return;
-  if (e.target.dataset.in === 'clubq') { const h = document.querySelector('.clubhit'); if (h) { e.preventDefault(); h.click(); } }
+  if (e.target.dataset.in === 'clubq') { e.preventDefault(); const h = document.querySelector('.clubhit:not(.new)') || (CLUBLIST || CLUBLIST_ERR ? document.querySelector('.clubhit.new') : null); if (h) h.click(); }
   if (e.target.dataset.in === 'cname') { e.preventDefault(); e.target.blur(); }
 });
 document.addEventListener('change', e => {
