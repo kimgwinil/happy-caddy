@@ -38,6 +38,9 @@ const T = {
   site: ['골프장 홈페이지', 'Club homepage', 'ゴルフ場ホームページ', '球场主页'],
   sitePh: ['예: www.skyhill.co.kr', 'e.g. www.example-cc.co.kr', '例: www.example-cc.co.kr', '例: www.example-cc.co.kr'],
   siteHelp: ['홈페이지 첫 화면의 사진이 배경으로 나옵니다. 사진은 저장하지 않고 홈페이지에서 바로 불러옵니다.', "The homepage's main photo becomes the background. It is loaded from the club's site, not copied.", 'ホームページのメイン写真が背景になります（コピーせず直接読み込み）。', '主页首图将作为背景（直接从主页加载，不复制）。'],
+  clubStep: ['아래에서 이 골프장의 코스를 9홀씩 등록하세요. 코스 이름을 넣고(예: 동코스) 홀별 파를 눌러 맞춘 뒤 저장합니다.', 'Register this club\'s courses below, 9 holes each: name the course, tap each par, then save.', '下でこのゴルフ場のコースを9ホールずつ登録してください。', '请在下方按9洞登记该球场的球道。'],
+  clubStepHas: ['오늘 칠 전반·후반 코스를 고르고 "이 코스로 정하기"를 누르세요. 코스를 더 등록할 수도 있습니다.', 'Pick today\'s front and back nine, then tap "Use these courses". You can add more courses below.', '今日の前半・後半コースを選んでください。', '请选择今天的前9洞和后9洞。'],
+  photoT: ['배경 사진', 'Background photo', '背景写真', '背景照片'],
   photoPick: ['홈페이지에서 찾은 사진입니다. 배경으로 쓸 사진을 눌러 고르세요.', 'Photos from the homepage. Tap one to use as the background.', 'ホームページの写真です。背景にする写真を選んでください。', '主页上的照片，点选一张作为背景。'],
   photoFind: ['홈페이지에서 사진을 찾는 중…', 'Looking for photos on the homepage…', 'ホームページの写真を探しています…', '正在主页上查找照片…'],
   noPhoto: ['홈페이지에서 사진을 찾지 못했습니다.', 'No photo found on the homepage.', 'ホームページに写真が見つかりません。', '主页上没有找到照片。'],
@@ -270,6 +273,7 @@ function photoUrl() {
   const c = club(), w = siteOf(); if (!w) return '';
   return c && c.img ? c.img : API + '/photo?site=' + encodeURIComponent(w);
 }
+const isMark = u => /logo|symbol|emblem|(^|[\/_-])[cb]i[_.\-]|mascot|character|chara[_.-]|\.svg/i.test(u || '');
 function photoCss() { const u = photoUrl(); return u ? ` style="--hero:url('${u.replace(/'/g, '%27').replace(/"/g, '%22')}')"` : ''; }
 function courseLabel() { return S.club ? S.club + (S.front && S.back ? ' · ' + (S.front === S.back ? S.front : S.front + '→' + S.back) : '') : ''; }
 
@@ -324,7 +328,7 @@ function applyCourses() {
 let DRAFT = null;   // 코스 추가·수정 중인 내용 { n, p[9], old }
 function hero(slim, extra = '') {
   const langs = `<div class="langs">${LANGS.map(l => `<button class="${l === LANG ? 'on' : ''}" data-act="lang" data-v="${l}" aria-label="${l}">${LANG_BTN[l]}</button>`).join('')}</div>`;
-  return `<header class="hero ${slim ? 'slim' : ''}"${slim ? '' : photoCss()}>${langs}
+  return `<header class="hero ${slim ? 'slim' : ''} ${!slim && isMark(photoUrl()) ? 'mark' : ''}"${slim ? '' : photoCss()}>${langs}
     <div class="brand"><img src="icons/icon-192.png" alt="">HAPPY <span>CADDY</span></div>
     <div class="date">${esc(fmtDate(S.date))}</div>
     <div class="course">${esc(S.course || t('sub'))}${S.course ? ' · ' + esc(t('sub')) : ''}</div>${extra}</header>`;
@@ -395,12 +399,13 @@ function vClub() {
   const pick = (which, cur) => `<div class="chips">${c.cs.map(x => `<button class="chip ${cur === x.n ? 'on' : ''}" data-act="${which}" data-n="${esc(x.n)}">${esc(x.n)}</button>`).join('')}</div>`;
   return hero(false) + `
   <section class="card"><div class="clubnow"><b>${esc(S.club)}</b>${c.r ? `<span>${esc(c.r)}</span>` : ''}</div>
-    <label><span class="lbl">${t('site')}</span><input type="url" inputmode="url" data-in="site" value="${esc(c.w)}" placeholder="${esc(t('sitePh'))}" maxlength="120" autocomplete="off"></label>
-    <p class="sub">${t('siteHelp')}</p><div id="photoNote">${photoPicker()}</div></section>
-  <section class="card"><span class="lbl">${t('coursesReg')}</span>
-    ${c.cs.length ? c.cs.map((x, i) => `<div class="crow"><button class="cname" data-act="cEdit" data-v="${i}">${esc(x.n)}</button>${parStrip(x.p)}
-      <button class="btn ghost small" data-act="cDel" data-v="${i}">${armed === 'cDel' + i ? t('delSure') : t('delC')}</button></div>`).join('') : `<p class="sub">${t('noCourses')}</p>`}
+    <p class="sub">${t(c.cs.length ? 'clubStepHas' : 'clubStep')}</p></section>
+  ${c.cs.length ? `<section class="card"><span class="lbl">${t('todayC')}</span>
+    <span class="lbl">${t('front')}</span>${pick('cFront', S.front)}
+    <span class="lbl">${t('back9')}</span>${pick('cBack', S.back)}
+    ${S.front && S.back ? parStrip(c.cs.find(x => x.n === S.front).p.concat(c.cs.find(x => x.n === S.back).p)) : ''}
   </section>
+  <button class="btn" data-act="cUse">${t('useCourses')}</button>` : ''}
   <section class="card" id="draft"><span class="lbl">${DRAFT.old != null ? t('editCourse') : t('addCourse')}</span>
     <input type="text" data-in="cname" value="${esc(DRAFT.n)}" placeholder="${esc(t('cnamePh'))}" maxlength="16">
     <div class="chips">${quick.map(q => `<button class="chip small" data-act="cQuick" data-n="${esc(q)}">${esc(q)}</button>`).join('')}</div>
@@ -409,12 +414,13 @@ function vClub() {
     <p class="sub">${t('parTotal', { x: DRAFT.p.reduce((a, b) => a + b, 0) })}</p>
     <button class="btn" data-act="cSave">💾 ${t('saveC')}</button>
   </section>
-  ${c.cs.length ? `<section class="card"><span class="lbl">${t('todayC')}</span>
-    <span class="lbl">${t('front')}</span>${pick('cFront', S.front)}
-    <span class="lbl">${t('back9')}</span>${pick('cBack', S.back)}
-    ${S.front && S.back ? parStrip(c.cs.find(x => x.n === S.front).p.concat(c.cs.find(x => x.n === S.back).p)) : ''}
-  </section>
-  <button class="btn" data-act="cUse">${t('useCourses')}</button>` : ''}
+  ${c.cs.length ? `<section class="card"><span class="lbl">${t('coursesReg')}</span>
+    ${c.cs.map((x, i) => `<div class="crow"><button class="cname" data-act="cEdit" data-v="${i}">${esc(x.n)}</button>${parStrip(x.p)}
+      <button class="btn ghost small" data-act="cDel" data-v="${i}">${armed === 'cDel' + i ? t('delSure') : t('delC')}</button></div>`).join('')}
+  </section>` : ''}
+  <section class="card"><span class="lbl">📷 ${t('photoT')}</span>
+    <label><span class="lbl">${t('site')}</span><input type="url" inputmode="url" data-in="site" value="${esc(c.w)}" placeholder="${esc(t('sitePh'))}" maxlength="120" autocomplete="off"></label>
+    <p class="sub">${t('siteHelp')}</p><div id="photoNote">${photoPicker()}</div></section>
   <button class="btn ghost" data-act="back">${t('toSetup')}</button>`;
 }
 // 홈페이지에서 찾은 사진 후보를 보여 주고, 사용자가 배경으로 쓸 사진을 고릅니다.
@@ -424,13 +430,18 @@ function photoPicker() {
   if (PHOTOS.site !== w || !PHOTOS.imgs) return `<p class="sub">${t('photoFind')}</p>`;
   if (!PHOTOS.imgs.length) return `<p class="sub">${t('noPhoto')}</p>`;
   const cur = c.img || PHOTOS.imgs[0];
-  return `<p class="sub">${t('photoPick')}</p><div class="thumbs">${PHOTOS.imgs.map(u => `<button class="thumb ${u === cur ? 'on' : ''}" data-act="pickImg" data-u="${esc(u)}"><img src="${esc(u)}" alt="" loading="lazy" referrerpolicy="no-referrer"></button>`).join('')}</div>`;
+  return `<p class="sub">${t('photoPick')}</p><div class="thumbs">${PHOTOS.imgs.map(u => `<button class="thumb ${u === cur ? 'on' : ''} ${isMark(u) ? 'mark' : ''}" data-act="pickImg" data-u="${esc(u)}"><img src="${esc(u)}" alt="" loading="lazy" referrerpolicy="no-referrer"></button>`).join('')}</div>`;
 }
 function checkPhoto() {
   const w = siteOf(); if (!w || (PHOTOS.site === w && PHOTOS.imgs)) return;
   PHOTOS = { site: w, imgs: null };
   fetch(API + '/photo?json=1&list=1&site=' + encodeURIComponent(w)).then(r => r.json()).catch(() => ({}))
-    .then(d => { if (PHOTOS.site !== w) return; PHOTOS.imgs = d.imgs || (d.img ? [d.img] : []); const el = document.getElementById('photoNote'); if (el) el.innerHTML = photoPicker(); });
+    .then(d => {
+      if (PHOTOS.site !== w) return; PHOTOS.imgs = d.imgs || (d.img ? [d.img] : []);
+      // 아직 고른 사진이 없으면 첫 번째(골프장 사진 > 마스코트 > 로고)를 배경으로 씁니다.
+      const c = club(); if (c && !c.img && PHOTOS.imgs.length && siteOf() === w) { putClub(S.club, { img: PHOTOS.imgs[0] }); if (S.phase === 'club') { render(); return; } }
+      const el = document.getElementById('photoNote'); if (el) el.innerHTML = photoPicker();
+    });
 }
 // 열리지 않는 사진은 목록에서 숨깁니다.
 document.addEventListener('error', e => { const b = e.target.closest && e.target.closest('.thumb'); if (b) b.remove(); }, true);
@@ -639,6 +650,11 @@ document.addEventListener('input', e => {
   else if (k === 'clubq') { clubQ = e.target.value; refreshClubRes(); }
   else if (k === 'cname') { DRAFT.n = e.target.value.trim(); }
   else if (k === 'caddieFee') { S.caddieFee = Math.max(0, parseInt(e.target.value) || 0); save(); const o = document.getElementById('feeOut'); if (o) o.textContent = S.caddieFee ? t('perPerson', { x: money(S.caddieFee / 4) }) : ''; }
+});
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Enter' || e.isComposing) return;
+  if (e.target.dataset.in === 'clubq') { const h = document.querySelector('.clubhit'); if (h) { e.preventDefault(); h.click(); } }
+  if (e.target.dataset.in === 'cname') { e.preventDefault(); e.target.blur(); }
 });
 document.addEventListener('change', e => {
   const k = e.target.dataset.in;

@@ -13,6 +13,15 @@
      "value": "no-cache"
     }
    ]
+  },
+  {
+   "source": "/app/data/(.*)",
+   "headers": [
+    {
+     "key": "Access-Control-Allow-Origin",
+     "value": "*"
+    }
+   ]
   }
  ]
 }

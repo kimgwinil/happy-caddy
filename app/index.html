@@ -25,7 +25,9 @@
 <script src="app.js"></script>
 <script>
 if('serviceWorker' in navigator && location.protocol!=='file:'){
-  window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+  window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').then(r=>r.update()).catch(()=>{}));
+  // 새 버전이 설치되면 한 번 새로고침해서 바로 새 화면을 보여 줍니다.
+  if(navigator.serviceWorker.controller){let done=false;navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!done){done=true;location.reload();}});}
 }
 </script>
 </body>

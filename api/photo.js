@@ -4,7 +4,9 @@
 //         /api/photo?site=...&json=1                     →  { img: "..." }
 //         /api/photo?site=...&json=1&list=1              →  { img, imgs: [후보 사진 8장] }
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36';
-const BAD = /logo|icon|(^|[\/_-])ico[_.-]|favicon|btn|button|sns|qr|banner_?s|bnr|popup|pop_|layer|notice|event|board|bbs|upload|arrow|blank|spacer|loading|symbol|_ci[._]|\/ci[._/]|kakao|naver|facebook|insta|youtube|thumb|award|map|txt|text|tit/i;
+const LOGO = /logo|symbol|emblem|(^|[\/_-])ci[_.\-]|(^|[\/_-])bi[_.\-]/i;
+const MASCOT = /mascot|character|chara[_.-]|캐릭터|마스코트/i;
+const BAD = /icon|(^|[\/_-])ico[_.-]|favicon|btn|button|sns|qr|banner_?s|bnr|popup|pop_|layer|notice|event|board|bbs|upload|arrow|blank|spacer|loading|kakao|naver|facebook|insta|youtube|thumb|award|map|txt|text|tit/i;
 const GOOD = /main|visual|vis[_-]|slide|swiper|hero|key|mv[_-]?\d|bg|course|intro|top/i;
 
 function abs(u, base) { try { return new URL(u.trim().replace(/&amp;/g, '&'), base).href; } catch (e) { return ''; } }
@@ -21,8 +23,11 @@ function candidates(text, base, from) {
   for (const m of text.matchAll(/<(?:img|source)[^>]+?(?:data-src|data-original|data-lazy|src)=["']([^"']+)["']/gi)) add(m[1], 0);
   for (const m of text.matchAll(/(?:data-bg|data-background|data-image)=["']([^"']+)["']/gi)) add(m[1], 1);
   for (const m of text.matchAll(/["']([^"'\s()]+\/[^"'\s()]+\.(?:jpe?g|webp))["']/gi)) add(m[1], 0);
+  for (const m of text.matchAll(/<img[^>]+?src=["']([^"']+\.(?:png|jpe?g|gif|svg|webp)[^"']*)["'][^>]*>/gi)) if (LOGO.test(m[0]) || MASCOT.test(m[0])) out.push({ u: abs(m[1], base), w: 0, from, tag: m[0] });
   return out;
 }
+// 골프장 사진 > 마스코트 > 로고 순서로 고릅니다.
+function kind(c) { const t = c.u + ' ' + (c.tag || ''); return MASCOT.test(t) ? 'mascot' : LOGO.test(t) ? 'logo' : 'photo'; }
 function score(c) {
   const path = new URL(c.u).pathname, file = path.split('/').pop(), dir = path.slice(0, -file.length);
   let s = c.w;
@@ -62,8 +67,12 @@ async function find(site, debug) {
   }
   const seen = new Set(); list = list.filter(c => !seen.has(c.u) && seen.add(c.u));
   list.forEach(c => c.s = score(c)); list.sort((a, b) => b.s - a.s);
-  const best = list.find(c => c.s >= 1);
-  const imgs = list.filter(c => c.s >= 1).slice(0, 8).map(c => c.u);
+  list.forEach(c => c.k = kind(c));
+  const photos = list.filter(c => c.k === 'photo' && c.s >= 1).slice(0, 6);
+  const mascots = list.filter(c => c.k === 'mascot').slice(0, 2);
+  const logos = list.filter(c => c.k === 'logo').sort((a, b) => (/\.svg/i.test(a.u) ? 1 : 0) - (/\.svg/i.test(b.u) ? 1 : 0)).slice(0, 2);
+  const ranked = photos.concat(mascots, logos);
+  const imgs = ranked.map(c => c.u), best = ranked[0];
   return debug ? { img: best ? best.u : '', imgs, top: list.slice(0, 8) } : { img: best ? best.u : '', imgs };
 }
 

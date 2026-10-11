@@ -168,3 +168,7 @@ tr.tot td{font-weight:800;border-bottom:0}
 .thumb{padding:0;border:3px solid transparent;border-radius:12px;overflow:hidden;background:var(--bg);cursor:pointer;aspect-ratio:16/10}
 .thumb img{width:100%;height:100%;object-fit:cover;display:block}
 .thumb.on{border-color:var(--flag)}
+.hero{background-color:#1d6a3d}
+.hero.mark{min-height:250px;background-size:cover,auto 42%;background-repeat:no-repeat;background-position:center,center 32%}
+.thumb.mark{background:#fff}
+.thumb.mark img{object-fit:contain;padding:8px}
