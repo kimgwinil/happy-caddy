@@ -1,4 +1,24 @@
 {
-  "functions": { "api/courses.js": { "maxDuration": 60 }, "api/photo.js": { "maxDuration": 20 } },
-  "headers": [ { "source": "/app/sw.js", "headers": [ { "key": "Cache-Control", "value": "no-cache" } ] } ]
+ "functions": {
+  "api/courses.js": {
+   "maxDuration": 60
+  },
+  "api/photo.js": {
+   "maxDuration": 20
+  },
+  "api/ping.js": {
+   "maxDuration": 60
+  }
+ },
+ "headers": [
+  {
+   "source": "/app/sw.js",
+   "headers": [
+    {
+     "key": "Cache-Control",
+     "value": "no-cache"
+    }
+   ]
+  }
+ ]
 }
