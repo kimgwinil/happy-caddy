@@ -49,7 +49,7 @@ module.exports = async (req, res) => {
     }
   } catch (e) { img = ''; }
   res.setHeader('Access-Control-Allow-Origin', '*');
-  if (!img) { res.setHeader('Cache-Control', 'public, s-maxage=86400'); res.status(404).json({ img: '' }); return; }
+  if (!img) { res.setHeader('Cache-Control', 'public, s-maxage=86400'); res.status(req.query.json ? 200 : 404).json({ img: '' }); return; }
   res.setHeader('Cache-Control', 'public, s-maxage=2592000, stale-while-revalidate=2592000');
   if (req.query.json) { res.status(200).json({ img }); return; }
   res.setHeader('Location', img); res.status(302).end();

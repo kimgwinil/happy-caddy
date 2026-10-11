@@ -56,6 +56,6 @@ module.exports = async (req, res) => {
     res.status(200).json({ v: 1, at: new Date().toISOString(), n: list.length, list });
   } catch (e) {
     res.setHeader('Cache-Control', 'no-store');
-    res.status(502).json({ error: String(e && e.message || e) });
+    res.status(200).json({ list: [], error: String(e && e.message || e) });
   }
 };
