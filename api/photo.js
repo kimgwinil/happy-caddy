@@ -3,7 +3,7 @@
 // 사용법: /api/photo?site=https://www.example-cc.co.kr  →  302 로 홈페이지 사진 주소
 //         /api/photo?site=...&json=1                     →  { img: "..." }
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36';
-const BAD = /logo|icon|favicon|btn|button|sns|qr|banner_?s|bnr|popup|arrow|blank|spacer|loading|symbol|_ci[._]|\/ci[._/]|kakao|naver|facebook|insta|youtube|thumb|award|map/i;
+const BAD = /logo|icon|(^|[\/_-])ico[_.-]|favicon|btn|button|sns|qr|banner_?s|bnr|popup|pop_|layer|notice|event|board|bbs|upload|arrow|blank|spacer|loading|symbol|_ci[._]|\/ci[._/]|kakao|naver|facebook|insta|youtube|thumb|award|map|txt|text|tit/i;
 const GOOD = /main|visual|vis[_-]|slide|swiper|hero|key|mv[_-]?\d|bg|course|intro|top/i;
 
 function abs(u, base) { try { return new URL(u.trim().replace(/&amp;/g, '&'), base).href; } catch (e) { return ''; } }
@@ -23,12 +23,12 @@ function candidates(text, base, from) {
   return out;
 }
 function score(c) {
-  const name = c.u.split('?')[0];
+  const path = new URL(c.u).pathname, file = path.split('/').pop(), dir = path.slice(0, -file.length);
   let s = c.w;
-  if (BAD.test(name)) s -= 10;
-  if (GOOD.test(name)) s += 3;
-  if (/\.jpe?g$|\.webp$/i.test(name)) s += 1;
-  if (/main|visual/i.test(name)) s += 2;
+  if (BAD.test(path)) s -= 10;
+  if (GOOD.test(file)) s += 3; else if (GOOD.test(dir)) s += 1;
+  if (/\.jpe?g$|\.webp$/i.test(file)) s += 1; else if (/\.png$/i.test(file)) s -= 1;
+  if (/main|visual/i.test(file)) s += 2;
   return s;
 }
 
@@ -41,7 +41,8 @@ async function get(url) {
 }
 
 async function find(site, debug) {
-  let { html, url } = await get(site);
+  let html, url;
+  try { ({ html, url } = await get(site)); } catch (e) { ({ html, url } = await get(site.replace(/^https:/i, 'http:'))); }
   // 프레임이나 자바스크립트 이동만 있는 첫 페이지는 한 번 따라갑니다.
   if (html.length < 3000) {
     const f = html.match(/<(?:frame|iframe)[^>]+src=["']([^"']+)["']/i) || html.match(/location(?:\.href)?\s*=\s*["']([^"']+)["']/i)
@@ -50,7 +51,7 @@ async function find(site, debug) {
   }
   const og = abs(meta(html, 'og:image') || meta(html, 'og:image:url') || meta(html, 'twitter:image'), url);
   let list = candidates(html, url, 'html');
-  if (og) list.push({ u: og, w: 2, from: 'og' });
+  if (og && !/\/$/.test(new URL(og).pathname) && og.replace(/\/$/, '') !== url.replace(/\/$/, '')) list.push({ u: og, w: 2, from: 'og' });
   // 첫 화면 사진이 CSS 파일 안에 있는 경우가 많아서, 주요 CSS 몇 개도 봅니다.
   if (!list.some(c => score(c) >= 4)) {
     const css = [...html.matchAll(/<link[^>]+href=["']([^"']+\.css[^"']*)["']/gi)].map(m => abs(m[1], url))
