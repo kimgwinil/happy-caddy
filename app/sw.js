@@ -1,5 +1,5 @@
 // Happy Caddy 오프라인 캐시. 파일을 바꾸면 VERSION을 올려야 새 버전이 퍼집니다.
-const VERSION = 'happy-caddy-v9';
+const VERSION = 'happy-caddy-v10';
 const SHELL = [
   './', 'index.html', 'style.css', 'app.js', 'vendor/qrcode.js', 'manifest.webmanifest',
   'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/maskable-512.png',
@@ -18,6 +18,14 @@ self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
   const url = new URL(e.request.url);
   if (url.origin !== location.origin) return;
+  // 골프장 목록은 매달 바뀌므로 인터넷이 되면 새 것을, 안 되면 보관본을 씁니다.
+  if (url.pathname.endsWith('/data/clubs.json')) {
+    e.respondWith(fetch(e.request).then(res => {
+      if (res.ok) { const copy = res.clone(); caches.open(VERSION).then(c => c.put(e.request, copy)); }
+      return res;
+    }).catch(() => caches.match(e.request, { ignoreSearch: true })));
+    return;
+  }
   e.respondWith(
     caches.match(e.request, { ignoreSearch: true }).then(hit => hit || fetch(e.request).then(res => {
       if (res.ok) { const copy = res.clone(); caches.open(VERSION).then(c => c.put(e.request, copy)); }

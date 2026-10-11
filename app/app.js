@@ -26,8 +26,14 @@ const LOCALE = { ko: 'ko-KR', en: 'en-US', ja: 'ja-JP', zh: 'zh-CN' };
 const T = {
   sub: ['4인 · 18홀 · 해피게임', '4 players · 18 holes · Happy Game', '4人・18ホール・ハッピーゲーム', '4人·18洞·快乐游戏'],
   course: ['골프장', 'Golf course', 'ゴルフ場', '球场'],
-  clubPh: ['골프장 이름 검색 (예: 스카이힐)', 'Search golf club (e.g. Sky Hill)', 'ゴルフ場名で検索', '搜索球场名称'],
-  clubHelp: ['이름 일부만 넣어도 전국 골프장에서 찾아 줍니다.', 'Type part of the name to search clubs across Korea.', '名前の一部で全国のゴルフ場を検索します。', '输入部分名称即可搜索全国球场。'],
+  clubPh: ['골프장 이름이나 지역 (예: 스카이힐, 용인)', 'Club name or place (e.g. Sky Hill, Yongin)', 'ゴルフ場名か地域名（例: 済州）', '球场名称或地区（如 济州）'],
+  clubHelp: ['이름 일부나 지역 이름(예: 용인, 가평, 제주)을 넣으면 전국 골프장에서 찾아 줍니다.', 'Type part of a club name, or a place such as Yongin or Jeju.', '名前の一部や地域名（例: 済州）で全国のゴルフ場を検索します。', '输入部分名称或地区名（如 济州）即可搜索全国球场。'],
+  regionFind: ['📍 지역으로 찾기', '📍 Browse by region', '📍 地域から探す', '📍 按地区查找'],
+  allArea: ['전체', 'All', 'すべて', '全部'],
+  clubsIn: ['{x} 골프장 {n}곳', '{x}: {n} clubs', '{x}のゴルフ場 {n}件', '{x}球场 {n}个'],
+  sortAsc: ['가→하 순', 'A → Z', '昇順', '升序'],
+  sortDesc: ['하→가 순', 'Z → A', '降順', '降序'],
+  recentDel: ['목록에서 지우기', 'Remove from list', 'リストから消す', '从列表删除'],
   clubNew: ['"{x}" 새 골프장으로 등록', 'Add "{x}" as a new club', '「{x}」を新しく登録', '将“{x}”登记为新球场'],
   clubLoading: ['전국 골프장 목록을 불러오는 중…', 'Loading golf clubs…', 'ゴルフ場一覧を読み込み中…', '正在加载球场列表…'],
   clubOffline: ['목록을 불러오지 못했어요. 이름을 넣고 새로 등록할 수 있습니다.', 'Could not load the list. You can still add a club by name.', '一覧を読み込めません。名前を入れて登録できます。', '无法加载列表，可输入名称新登记。'],
@@ -273,7 +279,7 @@ function settlement(C) {
 function clubs() { try { return JSON.parse(ls.get(CLUBS_KEY)) || {}; } catch (e) { return {}; } }
 function saveClubs(o) { ls.set(CLUBS_KEY, JSON.stringify(o)); }
 function club(name = S.club) { const o = clubs(); return o[name] || null; }
-function putClub(name, patch) { const o = clubs(); o[name] = Object.assign({ w: '', r: '', cs: [] }, o[name], patch, { at: Date.now() }); saveClubs(o); return o[name]; }
+function putClub(name, patch) { const o = clubs(); o[name] = Object.assign({ w: '', r: '', cs: [] }, o[name], patch, { at: Date.now() }); delete o[name].hid; saveClubs(o); return o[name]; }
 function siteOf(name = S.club) { const c = club(name); return (c && c.w) || (name === S.club ? S.site : '') || ''; }
 // 배경: 등록한 골프장의 홈페이지 첫 화면 사진만 씁니다(서버가 주소만 찾아 주고, 사진은 홈페이지에서 직접 불러옴).
 function photoUrl() {
@@ -289,6 +295,25 @@ const REGION = { 서울: ['Seoul', 'ソウル', '首尔'], 부산: ['Busan', '�
   경기: ['Gyeonggi', '京畿', '京畿'], 강원: ['Gangwon', '江原', '江原'], 충북: ['Chungbuk', '忠北', '忠北'], 충남: ['Chungnam', '忠南', '忠南'],
   전북: ['Jeonbuk', '全北', '全北'], 전남: ['Jeonnam', '全南', '全南'], 경북: ['Gyeongbuk', '慶北', '庆北'], 경남: ['Gyeongnam', '慶南', '庆南'], 제주: ['Jeju', '済州', '济州'] };
 const regionDisp = r => LANG === 'ko' || !REGION[r] ? r || '' : REGION[r][L() - 1];
+// 지역 버튼 순서(지도 위에서 아래로)와 지역 이름의 다른 표기
+const PROVS = ['서울', '경기', '인천', '강원', '충북', '충남', '대전', '세종', '전북', '전남', '광주', '경북', '경남', '대구', '울산', '부산', '제주'];
+const PROV_ALIAS = { 서울: '서울특별시 서울시', 부산: '부산광역시 부산시', 대구: '대구광역시 대구시', 인천: '인천광역시 인천시', 광주: '광주광역시 광주시', 대전: '대전광역시 대전시',
+  울산: '울산광역시 울산시', 세종: '세종특별자치시 세종시', 경기: '경기도', 강원: '강원도 강원특별자치도', 충북: '충청북도 충청북', 충남: '충청남도 충청남', 전북: '전라북도 전북특별자치도 전라북',
+  전남: '전라남도 전라남', 경북: '경상북도 경상북', 경남: '경상남도 경상남', 제주: '제주도 제주특별자치도' };
+let CITYNAMES = {};
+const cityDisp = c => !c ? '' : LANG === 'ko' || !CITYNAMES[c] ? c : CITYNAMES[c][L() - 1] || c;
+// 검색어가 지역(도·광역시) 또는 시·군·구 이름이면 그 지역을 돌려줍니다.
+function placeMatch(q) {
+  const n = String(q).toLowerCase().replace(/\s/g, ''), rs = new Set(), cs = new Set();
+  if (n.length < 2 && !/[\u3040-\u30ff\u4e00-\u9fff]/.test(n)) return { rs, cs };
+  const bare = x => String(x).toLowerCase().replace(/\s|-(si|gun|gu)$|(county|city|district)$/g, '');
+  for (const r of PROVS) if (r === n || PROV_ALIAS[r].split(' ').includes(n) || (REGION[r] || []).some(x => bare(x) === n)) rs.add(r);
+  for (const c of new Set((CLUBLIST || []).map(x => x.c).filter(Boolean))) {
+    const base = c.replace(/(특례시|시|군|구)$/, '');
+    if (c === n || (base === n && base.length >= 2) || (CITYNAMES[c] || []).some(x => bare(x) === n || bare(x).replace(/[市郡区區]$/, '') === n)) cs.add(c);
+  }
+  return { rs, cs };
+}
 const CWORD = { 동: ['East', '東', '东'], 서: ['West', '西', '西'], 남: ['South', '南', '南'], 북: ['North', '北', '北'], 코스: ['Course', 'コース', '球道'] };
 function courseDisp(n) {
   if (LANG === 'ko' || !n) return n || '';
@@ -302,38 +327,66 @@ function courseLabelDisp() {
 }
 function courseLabel() { return S.club ? S.club + (S.front && S.back ? ' · ' + (S.front === S.back ? S.front : S.front + '→' + S.back) : '') : ''; }
 
-// 전국 골프장 목록 (OpenStreetMap 기반 data/clubs.json, 기기에 30일 보관)
+// 전국 골프장 목록 (OpenStreetMap 기반 data/clubs.json). 기기에 보관해 두고 하루에 한 번 새 목록이 있는지 봅니다.
 let CLUBLIST = null, CLUBLIST_ERR = false, clubQ = '';
 function clubList() {
   if (CLUBLIST) return CLUBLIST;
-  try { const c = JSON.parse(ls.get(CLUBLIST_KEY)); if (c && c.list && c.list.length) { CLUBLIST = c.list; if (Date.now() - c.got < 30 * 864e5) return CLUBLIST; } } catch (e) {}
+  try { const c = JSON.parse(ls.get(CLUBLIST_KEY)); if (c && c.list && c.list.length) { CLUBLIST = c.list; CITYNAMES = c.cities || {}; if (Date.now() - c.got < 864e5 && c.cities && Object.keys(c.cities).length) return CLUBLIST; } } catch (e) {}
   if (!clubList.busy) {
     clubList.busy = true;
     const get = u => fetch(u).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); });
-    get('data/clubs.json').catch(() => get(WEB + 'data/clubs.json')).then(d => {
-      if (d.list && d.list.length) { CLUBLIST = d.list; ls.set(CLUBLIST_KEY, JSON.stringify({ got: Date.now(), list: d.list })); }
+    // 설치한 앱은 들어 있는 목록이 오래될 수 있으므로 인터넷의 새 목록을 먼저 봅니다.
+    (IS_WEB ? get('data/clubs.json').catch(() => get(WEB + 'data/clubs.json')) : get(WEB + 'data/clubs.json').catch(() => get('data/clubs.json'))).then(d => {
+      if (d.list && d.list.length) { CLUBLIST = d.list; CITYNAMES = d.cities || {}; ls.set(CLUBLIST_KEY, JSON.stringify({ got: Date.now(), list: d.list, cities: CITYNAMES })); }
       else if (!CLUBLIST) CLUBLIST_ERR = true;
     }).catch(() => { if (!CLUBLIST) CLUBLIST_ERR = true; }).finally(() => { clubList.busy = false; refreshClubRes(); });
   }
   return CLUBLIST;
 }
 const norm = s => String(s).toLowerCase().replace(/\s|\(.*?\)|골프클럽|골프장|컨트리클럽|골프앤리조트|골프&리조트|cc$|c\.c\.?$|gc$|g\.c\.?$/g, '');
+// 이름 검색은 가장 비슷한 8곳, 지역 검색(지역 버튼이나 지역 이름)은 그 지역의 골프장 전부를 이름 순서로 보여 줍니다.
+let clubR = '', clubC = '', clubSort = ls.get('happycaddy.clubsort') === '-1' ? -1 : 1, clubBrowse = false;
+function clubPool() {
+  const o = clubs(), list = clubList() || [];
+  const mine = Object.keys(o).filter(k => !o[k].hid).map(k => { const kn = list.find(c => c.n === k) || {};
+    return { n: k, r: o[k].r || kn.r, c: kn.c, en: o[k].en || kn.en, h: o[k].h || (o[k].cs.length * 9) || kn.h || 0, mine: true }; });
+  return mine.concat(list.filter(c => !o[c.n] || o[c.n].hid));
+}
+const showName = c => LANG === 'ko' || !c.en ? c.n : c.en;
 function searchClubs(q) {
-  const n = norm(q); if (!n) return [];
-  const mine = Object.keys(clubs()).map(k => ({ n: k, r: clubs()[k].r, en: clubs()[k].en, h: clubs()[k].h || (clubs()[k].cs.length * 9) || 0, mine: true }));
-  const all = mine.concat((clubList() || []).filter(c => !clubs()[c.n]));
-  const hit = all.filter(c => norm(c.n).includes(n) || (c.en && norm(c.en).includes(n)));
+  const n = norm(q || ''); let hit, browse = !!clubR;
+  if (n) {
+    const P = placeMatch(q); browse = browse || P.rs.size > 0 || P.cs.size > 0;
+    hit = clubPool().filter(c => norm(c.n).includes(n) || (c.en && norm(c.en).includes(n)) || P.rs.has(c.r) || P.cs.has(c.c));
+  } else hit = clubR ? clubPool() : [];
+  if (clubR) hit = hit.filter(c => c.r === clubR);
+  if (clubC) hit = hit.filter(c => c.c === clubC);
+  if (browse) return hit.sort((a, b) => clubSort * showName(a).localeCompare(showName(b), LANG));
   hit.sort((a, b) => (b.mine ? 1 : 0) - (a.mine ? 1 : 0) || (norm(a.n).startsWith(n) ? 0 : 1) - (norm(b.n).startsWith(n) ? 0 : 1) || a.n.length - b.n.length);
   return hit.slice(0, 8);
 }
+function regionChips() {
+  const list = clubList(), cnt = {}, ccnt = {};
+  for (const c of list || []) { cnt[c.r] = (cnt[c.r] || 0) + 1; if (c.r === clubR && c.c) ccnt[c.c] = (ccnt[c.c] || 0) + 1; }
+  const provs = list ? PROVS.filter(r => cnt[r]) : PROVS;
+  const cities = Object.keys(ccnt).sort((a, b) => cityDisp(a).localeCompare(cityDisp(b), LANG));
+  return `<span class="lbl">${t('regionFind')}</span>
+    <div class="regions ${LANG === 'en' ? 'wide' : ''}">${provs.map(r => `<button class="chip ${clubR === r ? 'on' : ''}" data-act="clubRegion" data-v="${esc(r)}">${esc(regionDisp(r))}${cnt[r] ? `<small>${cnt[r]}</small>` : ''}</button>`).join('')}</div>
+    ${clubR && cities.length > 1 ? `<div class="chips cities"><button class="chip small ${clubC ? '' : 'on'}" data-act="clubCity" data-v="">${t('allArea')}</button>${cities.map(c => `<button class="chip small ${clubC === c ? 'on' : ''}" data-act="clubCity" data-v="${esc(c)}">${esc(cityDisp(c))} <small>${ccnt[c]}</small></button>`).join('')}</div>` : ''}`;
+}
 function clubResHtml() {
-  const q = clubQ.trim();
-  if (!q) return '';
-  const list = clubList(), hits = searchClubs(q);
+  const q = clubQ.trim(), list = clubList(), hits = searchClubs(q);
+  clubBrowse = !!clubR || (!!q && (placeMatch(q).rs.size > 0 || placeMatch(q).cs.size > 0));
+  const chips = q ? '' : regionChips();
+  if (!q && !clubR) return chips;
   const head = !list && !CLUBLIST_ERR ? `<p class="sub">${t('clubLoading')}</p>` : !list && CLUBLIST_ERR ? `<p class="sub">${t('clubOffline')}</p>` : !hits.length ? `<p class="sub">${t('clubNone')}</p>` : '';
   const exact = hits.some(h => norm(h.n) === norm(q));
-  return head + `<div class="clubres">${hits.map(h => `<button class="clubhit" data-act="clubPick" data-n="${esc(h.n)}"><b>${esc(LANG === 'ko' || !h.en ? h.n : h.en + ' · ' + h.n)}</b><small>${[regionDisp(h.r), h.h ? t('holesN', { n: h.h }) : ''].filter(Boolean).map(esc).join(' · ')}</small>${h.mine ? '<small>⭐</small>' : ''}</button>`).join('')}
-    ${exact ? '' : `<button class="clubhit new" data-act="clubPick" data-n="${esc(q)}">➕ ${esc(t('clubNew', { x: q }))}</button>`}</div>`;
+  const P = q ? placeMatch(q) : null, one = P && P.rs.size + P.cs.size === 1 ? (P.rs.size ? regionDisp([...P.rs][0]) : cityDisp([...P.cs][0])) : '';
+  const inOne = one && hits.every(h => P.rs.has(h.r) || P.cs.has(h.c));
+  const where = clubC ? cityDisp(clubC) : clubR ? regionDisp(clubR) : inOne ? one : q;
+  const bar = clubBrowse && hits.length ? `<div class="resbar"><b>${esc(t('clubsIn', { x: where, n: hits.length }))}</b><button class="chip small" data-act="clubSort">↕ ${t(clubSort > 0 ? 'sortAsc' : 'sortDesc')}</button></div>` : '';
+  return chips + head + bar + `<div class="clubres">${hits.map(h => `<button class="clubhit" data-act="clubPick" data-n="${esc(h.n)}"><b>${esc(LANG === 'ko' || !h.en ? h.n : h.en + ' · ' + h.n)}</b><small>${[clubR ? '' : regionDisp(h.r), clubC ? '' : cityDisp(h.c), h.h ? t('holesN', { n: h.h }) : ''].filter(Boolean).map(esc).join(' · ')}</small>${h.mine ? '<small>⭐</small>' : ''}</button>`).join('')}
+    ${!q || exact || (clubBrowse && hits.length) ? '' : `<button class="clubhit new" data-act="clubPick" data-n="${esc(q)}">➕ ${esc(t('clubNew', { x: q }))}</button>`}</div>`;
 }
 function refreshClubRes() { const el = document.getElementById('clubRes'); if (el) el.innerHTML = clubResHtml(); }
 function pickClub(name) {
@@ -410,8 +463,7 @@ function vSetup() {
     ${S.club ? `<div class="clubnow"><b>${esc(clubDisp(S.club))}</b>${S.front && S.back ? `<span>${esc(t('front'))}: ${esc(courseDisp(S.front))} · ${esc(t('back9'))}: ${esc(courseDisp(S.back))}</span>` : ''}</div>
     <div class="row"><button class="btn small" data-act="clubOpen">⛳ ${t('clubEdit')}</button><button class="btn ghost small" data-act="clubClear">🔄 ${t('clubChange')}</button></div>`
     : `<p class="sub">${t('clubPickHelp')}</p><input type="search" data-in="clubq" value="${esc(clubQ)}" placeholder="${esc(t('clubPh'))}" maxlength="40" autocomplete="off" enterkeyhint="search">
-    <p class="sub">${t('clubHelp')}</p><div id="clubRes">${clubResHtml()}</div>
-    ${recentClubs()}`}
+    <p class="sub">${t('clubHelp')}</p>${recentClubs()}<div id="clubRes">${clubResHtml()}</div>`}
   </section>
   <section class="card"><span class="lbl">${t('players')}</span>
     <p class="sub">${t('playersHelp')}</p>
@@ -438,8 +490,8 @@ function vSetup() {
 }
 
 function recentClubs() {
-  const o = clubs(), names = Object.keys(o).sort((a, b) => (o[b].at || 0) - (o[a].at || 0)).slice(0, 6);
-  return names.length ? `<span class="lbl">${t('recent')}</span><div class="chips">${names.map(n => `<button class="chip" data-act="clubPick" data-n="${esc(n)}">${esc(clubDisp(n))}</button>`).join('')}</div>` : '';
+  const o = clubs(), names = Object.keys(o).filter(k => !o[k].hid).sort((a, b) => (o[b].at || 0) - (o[a].at || 0)).slice(0, 6);
+  return names.length ? `<span class="lbl">${t('recent')}</span><div class="chips">${names.map(n => `<span class="chipx"><button class="chip" data-act="clubPick" data-n="${esc(n)}">${esc(clubDisp(n))}</button><button class="x" data-act="recentDel" data-n="${esc(n)}" aria-label="${esc(t('recentDel'))}" title="${esc(t('recentDel'))}">✕</button></span>`).join('')}</div>` : '';
 }
 function vClub() {
   const c = club() || { w: '', r: '', cs: [] };
@@ -712,13 +764,13 @@ function toast(msg) {
 document.addEventListener('input', e => {
   const k = e.target.dataset.in; if (!k || VIEW) return;
   if (k === 'name') { S.players[+e.target.dataset.i] = e.target.value.trim(); save(); document.querySelectorAll('[data-act=holder]').forEach((b, i) => b.textContent = nm(i)); }
-  else if (k === 'clubq') { clubQ = e.target.value; refreshClubRes(); }
+  else if (k === 'clubq') { clubQ = e.target.value; clubR = clubC = ''; refreshClubRes(); }
   else if (k === 'cname') { DRAFT.n = e.target.value.trim(); }
   else if (k === 'caddieFee') { S.caddieFee = Math.max(0, parseInt(e.target.value) || 0); save(); const o = document.getElementById('feeOut'); if (o) o.textContent = S.caddieFee ? t('perPerson', { x: money(S.caddieFee / 4) }) : ''; }
 });
 document.addEventListener('keydown', e => {
   if (e.key !== 'Enter' || e.isComposing) return;
-  if (e.target.dataset.in === 'clubq') { e.preventDefault(); const h = document.querySelector('.clubhit:not(.new)') || (CLUBLIST || CLUBLIST_ERR ? document.querySelector('.clubhit.new') : null); if (h) h.click(); }
+  if (e.target.dataset.in === 'clubq') { e.preventDefault(); if (clubBrowse) { e.target.blur(); return; } const h = document.querySelector('.clubhit:not(.new)') || (CLUBLIST || CLUBLIST_ERR ? document.querySelector('.clubhit.new') : null); if (h) h.click(); }
   if (e.target.dataset.in === 'cname') { e.preventDefault(); e.target.blur(); }
 });
 document.addEventListener('change', e => {
@@ -741,7 +793,11 @@ document.addEventListener('click', async e => {
     case 'parHere': if (VIEW) return; S.pars[S.cur] = S.pars[S.cur] === 5 ? 3 : S.pars[S.cur] + 1; break;
     case 'clubPick': pickClub(b.dataset.n); break;
     case 'clubOpen': DRAFT = null; S.phase = 'club'; break;
-    case 'clubClear': S.club = S.front = S.back = S.site = ''; S.course = ''; clubQ = ''; DRAFT = null; if (S.phase === 'club') S.phase = 'setup'; setTimeout(() => { const q = document.querySelector('[data-in=clubq]'); if (q) q.focus(); }, 50); break;
+    case 'clubRegion': clubR = clubR === b.dataset.v ? '' : b.dataset.v; clubC = ''; clubQ = ''; { const q = document.querySelector('[data-in=clubq]'); if (q) q.value = ''; } refreshClubRes(); return;
+    case 'clubCity': clubC = b.dataset.v; refreshClubRes(); return;
+    case 'clubSort': clubSort = -clubSort; ls.set('happycaddy.clubsort', String(clubSort)); refreshClubRes(); return;
+    case 'recentDel': { const o = clubs(); if (o[b.dataset.n]) { o[b.dataset.n].hid = true; saveClubs(o); } render(); return; }
+    case 'clubClear': S.club = S.front = S.back = S.site = ''; S.course = ''; clubQ = ''; clubR = clubC = ''; DRAFT = null; if (S.phase === 'club') S.phase = 'setup'; setTimeout(() => { const q = document.querySelector('[data-in=clubq]'); if (q) q.focus(); }, 50); break;
     case 'dpar': DRAFT.p[v] = DRAFT.p[v] === 5 ? 3 : DRAFT.p[v] + 1; break;
     case 'cQuick': DRAFT.n = b.dataset.n; break;
     case 'cEdit': { const x = club().cs[v]; DRAFT = { n: x.n, p: x.p.slice(), old: v }; save(); render(); document.getElementById('draft').scrollIntoView({ block: 'start' }); return; }
