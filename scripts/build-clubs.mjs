@@ -54,7 +54,10 @@ function ninesOf(holes) {
     .filter(h => h.ref >= 1 && h.ref <= 36 && h.par >= 3 && h.par <= 6);
   const out = [];
   const nine = (n, list) => { const byRef = new Map(list.map(h => [h.ref, h.par])); const refs = [...byRef.keys()].sort((a, b) => a - b);
-    if (refs.length !== 9) return; const p = refs.map(r => byRef.get(r)); out.push({ n, p }); };
+    if (refs.length !== 9) return; const p = refs.map(r => byRef.get(r));
+    // 말이 안 되는 자료(합계 파가 33~38 밖이거나 모두 같은 파)는 버립니다.
+    const sum = p.reduce((a, b) => a + b, 0); if (sum < 33 || sum > 38 || new Set(p).size === 1) return;
+    out.push({ n, p }); };
   // 홀 이름에 코스 이름이 있으면(예: '동 3', 'Lake 7') 그것으로 나눕니다.
   const prefix = h => h.name.replace(/(\d+)\s*(번)?\s*(홀|hole)?/gi, '').replace(/\b(hole|no\.?)\b/gi, '').replace(/[#\-_.]/g, ' ').trim();
   const groups = new Map(); for (const h of hs) { const k = prefix(h); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(h); }
@@ -105,4 +108,3 @@ const list = [...seen.values()].sort((a, b) => a.n.localeCompare(b.n, 'ko'));
 mkdirSync('app/data', { recursive: true });
 writeFileSync('app/data/clubs.json', JSON.stringify({ v: 1, src: 'OpenStreetMap contributors (ODbL)', at: new Date().toISOString().slice(0, 10), n: list.length, list }));
 console.log('clubs', list.length, 'with website', list.filter(x => x.w).length, 'with holes', list.filter(x => x.h).length, 'with courses', list.filter(x => x.cs).length);
-for (const x of list.filter(x => x.cs).slice(0, 40)) console.log(x.n, x.h, JSON.stringify(x.cs));

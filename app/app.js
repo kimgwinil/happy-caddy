@@ -38,6 +38,9 @@ const T = {
   site: ['골프장 홈페이지', 'Club homepage', 'ゴルフ場ホームページ', '球场主页'],
   sitePh: ['예: www.skyhill.co.kr', 'e.g. www.example-cc.co.kr', '例: www.example-cc.co.kr', '例: www.example-cc.co.kr'],
   siteHelp: ['홈페이지에서 골프장 사진을 먼저 찾고, 없으면 마스코트나 로고를 배경으로 씁니다. 사진은 저장하지 않고 홈페이지에서 바로 불러옵니다.', "We use the club's photo from its homepage, or its mascot or logo if there is none. Images load from the club's site and are not copied.", 'ホームページのゴルフ場写真、なければマスコットやロゴを背景にします（コピーせず直接読み込み）。', '优先使用主页上的球场照片，没有时用吉祥物或标志（直接从主页加载，不复制）。'],
+  holesN: ['{n}홀', '{n} holes', '{n}ホール', '{n}洞'],
+  ninesN: ['9홀 코스 {n}개', '{n} nines', '9ホール×{n}', '{n}个9洞球道'],
+  autoCourses: ['공개 지도 자료(OpenStreetMap)에 있는 홀별 파로 코스를 미리 넣어 두었습니다. 실제와 다르면 코스 이름을 눌러 고쳐 주세요.', 'Courses were pre-filled from OpenStreetMap hole data. Tap a course name to fix anything that differs.', '公開地図データのパーでコースを登録しました。違う場合はコース名を押して修正してください。', '已根据公开地图数据预先填入球道，如有不同请点击球道名称修改。'],
   clubStep: ['아래에서 이 골프장의 코스를 9홀씩 등록하세요. 코스 이름을 넣고(예: 동코스) 홀별 파를 눌러 맞춘 뒤 저장합니다.', 'Register this club\'s courses below, 9 holes each: name the course, tap each par, then save.', '下でこのゴルフ場のコースを9ホールずつ登録してください。', '请在下方按9洞登记该球场的球道。'],
   clubStepHas: ['오늘 칠 전반·후반 코스를 고르고 "이 코스로 정하기"를 누르세요. 코스를 더 등록할 수도 있습니다.', 'Pick today\'s front and back nine, then tap "Use these courses". You can add more courses below.', '今日の前半・後半コースを選んでください。', '请选择今天的前9洞和后9洞。'],
   clubPickHelp: ['오늘 칠 골프장을 검색해서 고르세요. 전에 고른 골프장은 아래 "최근 골프장"에서 바로 누를 수 있습니다.', 'Search for today\'s club, or tap one under Recent clubs.', '今日のゴルフ場を検索するか、最近のゴルフ場から選んでください。', '搜索今天的球场，或从最近的球场中选择。'],
@@ -298,7 +301,7 @@ function clubList() {
 const norm = s => String(s).toLowerCase().replace(/\s|\(.*?\)|골프클럽|골프장|컨트리클럽|골프앤리조트|골프&리조트|cc$|c\.c\.?$|gc$|g\.c\.?$/g, '');
 function searchClubs(q) {
   const n = norm(q); if (!n) return [];
-  const mine = Object.keys(clubs()).map(k => ({ n: k, r: clubs()[k].r, mine: true }));
+  const mine = Object.keys(clubs()).map(k => ({ n: k, r: clubs()[k].r, h: clubs()[k].h || (clubs()[k].cs.length * 9) || 0, mine: true }));
   const all = mine.concat((clubList() || []).filter(c => !clubs()[c.n]));
   const hit = all.filter(c => norm(c.n).includes(n) || (c.en && norm(c.en).includes(n)));
   hit.sort((a, b) => (b.mine ? 1 : 0) - (a.mine ? 1 : 0) || (norm(a.n).startsWith(n) ? 0 : 1) - (norm(b.n).startsWith(n) ? 0 : 1) || a.n.length - b.n.length);
@@ -310,14 +313,17 @@ function clubResHtml() {
   const list = clubList(), hits = searchClubs(q);
   const head = !list && !CLUBLIST_ERR ? `<p class="sub">${t('clubLoading')}</p>` : !list && CLUBLIST_ERR ? `<p class="sub">${t('clubOffline')}</p>` : !hits.length ? `<p class="sub">${t('clubNone')}</p>` : '';
   const exact = hits.some(h => norm(h.n) === norm(q));
-  return head + `<div class="clubres">${hits.map(h => `<button class="clubhit" data-act="clubPick" data-n="${esc(h.n)}"><b>${esc(h.n)}</b>${h.r ? `<small>${esc(h.r)}</small>` : ''}${h.mine ? '<small>⭐</small>' : ''}</button>`).join('')}
+  return head + `<div class="clubres">${hits.map(h => `<button class="clubhit" data-act="clubPick" data-n="${esc(h.n)}"><b>${esc(h.n)}</b><small>${[h.r, h.h ? t('holesN', { n: h.h }) : ''].filter(Boolean).map(esc).join(' · ')}</small>${h.mine ? '<small>⭐</small>' : ''}</button>`).join('')}
     ${exact ? '' : `<button class="clubhit new" data-act="clubPick" data-n="${esc(q)}">➕ ${esc(t('clubNew', { x: q }))}</button>`}</div>`;
 }
 function refreshClubRes() { const el = document.getElementById('clubRes'); if (el) el.innerHTML = clubResHtml(); }
 function pickClub(name) {
   name = String(name).trim().slice(0, 40); if (!name) return;
   const known = (clubList() || []).find(c => c.n === name), mine = club(name);
-  putClub(name, { w: (mine && mine.w) || (known && known.w) || '', r: (mine && mine.r) || (known && known.r) || '' });
+  // 지도 자료에 코스(홀별 파)가 있으면, 아직 등록한 코스가 없을 때 자동으로 넣어 줍니다.
+  const auto = known && known.cs && !(mine && mine.cs && mine.cs.length) ? known.cs.map(x => ({ n: x.n, p: x.p.slice() })) : null;
+  putClub(name, Object.assign({ w: (mine && mine.w) || (known && known.w) || '', r: (mine && mine.r) || (known && known.r) || '', h: (mine && mine.h) || (known && known.h) || 0 },
+    auto ? { cs: auto, auto: true } : {}));
   S.club = name; S.site = siteOf(name); S.front = S.back = ''; S.course = name; clubQ = '';
   const cs = club(name).cs; if (cs.length === 1) S.front = S.back = cs[0].n; else if (cs.length >= 2) { S.front = cs[0].n; S.back = cs[1].n; }
   DRAFT = null; S.phase = 'club';
@@ -402,7 +408,8 @@ function vClub() {
   const quick = ['동', '서', '남', '북', 'OUT', 'IN'].map(x => /^[A-Z]/.test(x) ? x : x + (LANG === 'ko' ? '코스' : ''));
   const pick = (which, cur) => `<div class="chips">${c.cs.map(x => `<button class="chip ${cur === x.n ? 'on' : ''}" data-act="${which}" data-n="${esc(x.n)}">${esc(x.n)}</button>`).join('')}</div>`;
   return hero(false) + `
-  <section class="card"><div class="clubnow"><b>${esc(S.club)}</b>${c.r ? `<span>${esc(c.r)}</span>` : ''}</div>
+  <section class="card"><div class="clubnow"><b>${esc(S.club)}</b><span>${[c.r, c.h ? t('holesN', { n: c.h }) + (c.h > 9 && c.h % 9 === 0 ? ' · ' + t('ninesN', { n: c.h / 9 }) : '') : ''].filter(Boolean).map(esc).join(' · ')}</span></div>
+    ${c.auto ? `<p class="note">🗺️ ${t('autoCourses')}</p>` : ''}
     <p class="sub">${t(c.cs.length ? 'clubStepHas' : 'clubStep')}</p>
     <button class="btn ghost small" data-act="clubClear">🔄 ${t('clubChange')}</button></section>
   ${c.cs.length ? `<section class="card"><span class="lbl">${t('todayC')}</span>
@@ -712,7 +719,7 @@ document.addEventListener('click', async e => {
       const same = cs.findIndex(x => x.n === item.n);
       if (DRAFT.old != null && cs[DRAFT.old]) { cs[DRAFT.old] = item; if (same >= 0 && same !== DRAFT.old) cs.splice(same, 1); }
       else if (same >= 0) cs[same] = item; else cs.push(item);
-      putClub(S.club, { cs });
+      putClub(S.club, { cs, auto: false });
       if (oldName) { if (S.front === oldName) S.front = item.n; if (S.back === oldName) S.back = item.n; }
       if (!S.front) S.front = item.n; else if (!S.back || S.back === S.front && cs.length === 2) S.back = item.n;
       if (!S.back) S.back = S.front;   // 코스가 하나뿐이면 전반·후반 모두 그 코스
