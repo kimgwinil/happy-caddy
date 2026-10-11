@@ -47,6 +47,11 @@ module.exports = async (req, res) => {
   if (!process.env.BLOB_READ_WRITE_TOKEN && !process.env.BLOB_STORE_ID) { res.status(200).json({ off: true }); return; }
   const blob = require('@vercel/blob');
   try {
+    if (req.method === 'GET' && req.query.selftest) {   // 임시 점검: 쓰고 다시 읽기
+      const t0 = { club: '__selftest', cs: [{ n: 'T', p: [4, 4, 3, 5, 4, 4, 3, 4, 5] }], at: new Date().toISOString() };
+      await writeJson(blob, 'courses/__selftest.json', t0); const back = await readJson(blob, 'courses/__selftest.json');
+      res.status(200).json({ wrote: t0.at, read: back && back.at }); return;
+    }
     if (req.method === 'GET') {
       const club = String(req.query.club || '').slice(0, 60);
       if (!norm(club)) { res.status(400).json({ error: 'club' }); return; }
