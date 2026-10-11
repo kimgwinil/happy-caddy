@@ -127,6 +127,8 @@ const T = {
   holdFormula: ['받을 돈 = 상금 + {each} · 손익 = 받을 돈 − {dep}', 'Collect = prizes + {each} · Net = collect − {dep}', '受取額 = 賞金 + {each}・損益 = 受取額 − {dep}', '领取 = 奖金 + {each} · 盈亏 = 领取 − {dep}'],
   feeSplit: ['캐디피 {fee} → 1인당 {each} (현장에서 각자)', 'Caddie fee {fee} → {each} each (paid on site)', 'キャディフィー {fee} → 1人 {each}（現地で各自）', '球童费 {fee} → 每人 {each}（现场各付）'],
   again: ['같은 멤버로 새 게임', 'New game, same players', '同じメンバーで新しいゲーム', '同一组新游戏'],
+  newGame: ['🏠 새 게임 · 골프장 바꾸기', '🏠 New game · change club', '🏠 新しいゲーム・ゴルフ場変更', '🏠 新游戏·更换球场'],
+  newGameArm: ['한 번 더 누르면 새 게임 (지금 점수는 지워짐)', 'Tap again: new game (scores erased)', 'もう一度で新しいゲーム（スコア削除）', '再按一次开始新游戏（清除成绩）'],
   reset: ['처음부터', 'Start over', '最初から', '重新开始'],
   resetArm: ['한 번 더 누르면 삭제', 'Tap again to erase', 'もう一度で削除', '再按一次删除'],
   print: ['인쇄하기', 'Print', '印刷', '打印'],
@@ -332,7 +334,8 @@ function hero(slim, extra = '') {
   return `<header class="hero ${slim ? 'slim' : ''} ${!slim && isMark(photoUrl()) ? 'mark' : ''}"${slim ? '' : photoCss()}>${langs}
     <div class="brand"><img src="icons/icon-192.png" alt="">HAPPY <span>CADDY</span></div>
     <div class="date">${esc(fmtDate(S.date))}</div>
-    <div class="course">${esc(S.course || t('sub'))}${S.course ? ' · ' + esc(t('sub')) : ''}</div>${extra}</header>`;
+    <div class="course">${esc(S.course || t('sub'))}${S.course ? ' · ' + esc(t('sub')) : ''}</div>${extra}
+    ${(S.phase === 'play' || S.phase === 'draw') && !VIEW ? `<button class="newgame ${armed === 'newGame' ? 'arm' : ''}" data-act="newGame">${t(armed === 'newGame' ? 'newGameArm' : 'newGame')}</button>` : ''}</header>`;
 }
 function parStrip(p) { return `<span class="parstrip">${p.map(x => `<i class="p${x}">${x}</i>`).join('')}<em>${p.reduce((a, b) => a + b, 0)}</em></span>`;
 }
@@ -681,7 +684,7 @@ document.addEventListener('change', e => {
 });
 document.addEventListener('click', async e => {
   const b = e.target.closest('[data-act]'); if (!b) return;
-  const a = b.dataset.act, v = +b.dataset.v; if (a !== 'reset' && a !== 'cDel') armed = null;
+  const a = b.dataset.act, v = +b.dataset.v; if (a !== 'reset' && a !== 'cDel' && a !== 'newGame') armed = null;
   switch (a) {
     case 'lang': LANG = b.dataset.v; ls.set(LANG_KEY, LANG); break;
     case 'holder': S.holder = v; break;
@@ -711,13 +714,14 @@ document.addEventListener('click', async e => {
       else if (same >= 0) cs[same] = item; else cs.push(item);
       putClub(S.club, { cs });
       if (oldName) { if (S.front === oldName) S.front = item.n; if (S.back === oldName) S.back = item.n; }
-      if (!S.front) S.front = item.n; else if (!S.back) S.back = item.n;
+      if (!S.front) S.front = item.n; else if (!S.back || S.back === S.front && cs.length === 2) S.back = item.n;
+      if (!S.back) S.back = S.front;   // 코스가 하나뿐이면 전반·후반 모두 그 코스
       DRAFT = null; toast(t('savedOk')); break;
     }
     case 'pickImg': putClub(S.club, { img: b.dataset.u }); break;
     case 'cFront': S.front = b.dataset.n; break;
     case 'cBack': S.back = b.dataset.n; break;
-    case 'cUse': if (!applyCourses()) { toast(t('pickBoth')); return; } S.phase = 'setup'; break;
+    case 'cUse': { const c = club(); if (c && c.cs.length === 1) S.front = S.back = c.cs[0].n; if (!applyCourses()) { toast(t('pickBoth')); return; } S.phase = 'setup'; break; }
     case 'toDraw': S.phase = 'draw'; manual = null; break;
     case 'back': if (S.phase === 'club') applyCourses(); S.phase = 'setup'; manual = null; DRAFT = null; break;
     case 'spin': spin(); return;
@@ -730,6 +734,11 @@ document.addEventListener('click', async e => {
     case 'dec': S.scores[S.cur][v] = Math.max(1, S.scores[S.cur][v] - 1); break;
     case 'confirm': { const was = S.done[S.cur]; S.done[S.cur] = true; if (S.cur === 17 && !was) S.tab = 'set'; else if (!was) S.cur++; break; }
     case 'again': S = fresh(S); break;
+    case 'newGame': {
+      // 점수가 있으면 두 번 눌러야 새 게임이 됩니다. 이름·골프장·코스는 그대로 두고 첫 화면으로 갑니다.
+      if (S.done.some(Boolean) && armed !== 'newGame') { armed = 'newGame'; render(); return; }
+      armed = null; DRAFT = null; manual = null; S = fresh(S); break;
+    }
     case 'reset': if (armed === 'reset') { S = fresh(); armed = null; } else armed = 'reset'; break;
     case 'print': printView(); return;
     case 'install': if (installEvt) { installEvt.prompt(); await installEvt.userChoice; installEvt = null; } break;
@@ -757,6 +766,8 @@ function boot() {
     try { S = readShared(m[1]); VIEW = true; }
     catch (err) { VIEW = false; S = load() || fresh(); setTimeout(() => toast(t('badLink')), 50); }
   }
+  // 지난 날짜에 시작만 하고 치지 않은 게임은 새 게임으로 바꿉니다.
+  if (!VIEW && S.phase !== 'setup' && S.date !== today() && !S.done.some(Boolean)) S = fresh(S);
   render();
 }
 window.addEventListener('hashchange', boot);
