@@ -40,6 +40,7 @@ const T = {
   siteHelp: ['홈페이지에서 골프장 사진을 먼저 찾고, 없으면 마스코트나 로고를 배경으로 씁니다. 사진은 저장하지 않고 홈페이지에서 바로 불러옵니다.', "We use the club's photo from its homepage, or its mascot or logo if there is none. Images load from the club's site and are not copied.", 'ホームページのゴルフ場写真、なければマスコットやロゴを背景にします（コピーせず直接読み込み）。', '优先使用主页上的球场照片，没有时用吉祥物或标志（直接从主页加载，不复制）。'],
   clubStep: ['아래에서 이 골프장의 코스를 9홀씩 등록하세요. 코스 이름을 넣고(예: 동코스) 홀별 파를 눌러 맞춘 뒤 저장합니다.', 'Register this club\'s courses below, 9 holes each: name the course, tap each par, then save.', '下でこのゴルフ場のコースを9ホールずつ登録してください。', '请在下方按9洞登记该球场的球道。'],
   clubStepHas: ['오늘 칠 전반·후반 코스를 고르고 "이 코스로 정하기"를 누르세요. 코스를 더 등록할 수도 있습니다.', 'Pick today\'s front and back nine, then tap "Use these courses". You can add more courses below.', '今日の前半・後半コースを選んでください。', '请选择今天的前9洞和后9洞。'],
+  clubPickHelp: ['오늘 칠 골프장을 검색해서 고르세요. 전에 고른 골프장은 아래 "최근 골프장"에서 바로 누를 수 있습니다.', 'Search for today\'s club, or tap one under Recent clubs.', '今日のゴルフ場を検索するか、最近のゴルフ場から選んでください。', '搜索今天的球场，或从最近的球场中选择。'],
   photoT: ['배경 사진', 'Background photo', '背景写真', '背景照片'],
   photoPick: ['홈페이지에서 찾은 사진입니다. 배경으로 쓸 사진을 눌러 고르세요.', 'Photos from the homepage. Tap one to use as the background.', 'ホームページの写真です。背景にする写真を選んでください。', '主页上的照片，点选一张作为背景。'],
   photoFind: ['홈페이지에서 사진을 찾는 중…', 'Looking for photos on the homepage…', 'ホームページの写真を探しています…', '正在主页上查找照片…'],
@@ -359,8 +360,8 @@ function vSetup() {
   return hero(false) + kakaoCard() + `
   <section class="card"><span class="lbl">${t('course')}</span>
     ${S.club ? `<div class="clubnow"><b>${esc(S.club)}</b>${S.front && S.back ? `<span>${esc(t('front'))}: ${esc(S.front)} · ${esc(t('back9'))}: ${esc(S.back)}</span>` : ''}</div>
-    <div class="row"><button class="btn small" data-act="clubOpen">⛳ ${t('clubEdit')}</button><button class="btn ghost small" data-act="clubClear">${t('clubChange')}</button></div>`
-    : `<input type="search" data-in="clubq" value="${esc(clubQ)}" placeholder="${esc(t('clubPh'))}" maxlength="40" autocomplete="off" enterkeyhint="search">
+    <div class="row"><button class="btn small" data-act="clubOpen">⛳ ${t('clubEdit')}</button><button class="btn ghost small" data-act="clubClear">🔄 ${t('clubChange')}</button></div>`
+    : `<p class="sub">${t('clubPickHelp')}</p><input type="search" data-in="clubq" value="${esc(clubQ)}" placeholder="${esc(t('clubPh'))}" maxlength="40" autocomplete="off" enterkeyhint="search">
     <p class="sub">${t('clubHelp')}</p><div id="clubRes">${clubResHtml()}</div>
     ${recentClubs()}`}
   </section>
@@ -399,7 +400,8 @@ function vClub() {
   const pick = (which, cur) => `<div class="chips">${c.cs.map(x => `<button class="chip ${cur === x.n ? 'on' : ''}" data-act="${which}" data-n="${esc(x.n)}">${esc(x.n)}</button>`).join('')}</div>`;
   return hero(false) + `
   <section class="card"><div class="clubnow"><b>${esc(S.club)}</b>${c.r ? `<span>${esc(c.r)}</span>` : ''}</div>
-    <p class="sub">${t(c.cs.length ? 'clubStepHas' : 'clubStep')}</p></section>
+    <p class="sub">${t(c.cs.length ? 'clubStepHas' : 'clubStep')}</p>
+    <button class="btn ghost small" data-act="clubClear">🔄 ${t('clubChange')}</button></section>
   ${c.cs.length ? `<section class="card"><span class="lbl">${t('todayC')}</span>
     <span class="lbl">${t('front')}</span>${pick('cFront', S.front)}
     <span class="lbl">${t('back9')}</span>${pick('cBack', S.back)}
@@ -690,7 +692,7 @@ document.addEventListener('click', async e => {
     case 'parHere': if (VIEW) return; S.pars[S.cur] = S.pars[S.cur] === 5 ? 3 : S.pars[S.cur] + 1; break;
     case 'clubPick': pickClub(b.dataset.n); break;
     case 'clubOpen': DRAFT = null; S.phase = 'club'; break;
-    case 'clubClear': S.club = S.front = S.back = S.site = ''; S.course = ''; clubQ = ''; break;
+    case 'clubClear': S.club = S.front = S.back = S.site = ''; S.course = ''; clubQ = ''; DRAFT = null; if (S.phase === 'club') S.phase = 'setup'; setTimeout(() => { const q = document.querySelector('[data-in=clubq]'); if (q) q.focus(); }, 50); break;
     case 'dpar': DRAFT.p[v] = DRAFT.p[v] === 5 ? 3 : DRAFT.p[v] + 1; break;
     case 'cQuick': DRAFT.n = b.dataset.n; break;
     case 'cEdit': { const x = club().cs[v]; DRAFT = { n: x.n, p: x.p.slice(), old: v }; save(); render(); document.getElementById('draft').scrollIntoView({ block: 'start' }); return; }
