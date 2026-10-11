@@ -16,7 +16,7 @@ area["ISO3166-1"="KR"][admin_level=2]->.kr;
 nwr[leisure=golf_course](area.kr);
 out center tags;`;
 // 도 경계가 지도에서 깨진 곳(전남·광주 등)은 위 도별 목록에 안 나오므로, 마지막에 전국 목록을 한 번 더 받아 빠진 골프장을 채웁니다.
-const SKIP = /파크\s*골프|park\s*golf|그라운드\s*골프|미니\s*골프|mini\s*golf|연습장|driving|스크린|게이트볼|골프존\s*파크|아카데미|academy|스튜디오|studio|레슨|^골프장$|^[A-Z0-9]{3,5}$/i;
+const SKIP = /파크\s*골프|park\s*golf|그라운드\s*골프|미니\s*골프|mini\s*golf|연습장|driving|스크린|게이트볼|골프존\s*파크|골프존(?!\s*카운티)|골프\s*스쿨|아카데미|academy|스튜디오|studio|레슨|^골프장$|^[A-Z0-9]{3,5}$/i;
 // 코스 하나만 따로 표시된 것(예: 'HILL Course', '파인코스')은 골프장이 아니므로 뺍니다.
 const PART = s => /(코스|course)$/i.test(s) && s.replace(/\s/g, '').length <= 10 && !/(CC|GC|골프|컨트리|클럽|리조트)/i.test(s);
 const PROV = { 'KR-11': '서울', 'KR-26': '부산', 'KR-27': '대구', 'KR-28': '인천', 'KR-29': '광주', 'KR-30': '대전', 'KR-31': '울산', 'KR-50': '세종',
@@ -152,6 +152,13 @@ for (const o of seen.values()) {
   if (!o.r && o.c && provOfCity.has(o.c) && !/^(동|서|남|북|중)구$/.test(o.c)) { const m = provOfCity.get(o.c); o.r = Object.keys(m).sort((a, b) => m[b] - m[a])[0]; }
   if (!o.r && old && old.r) o.r = old.r;
 }
+// 전남·광주는 지도에서 도 경계가 깨져 있어 시·군 이름과 좌표로 정합니다.
+const JEONNAM = '목포시 여수시 순천시 나주시 광양시 담양군 곡성군 구례군 고흥군 보성군 화순군 장흥군 강진군 해남군 영암군 무안군 함평군 영광군 장성군 완도군 진도군 신안군'.split(' ');
+const inGwangju = o => o.la > 35.04 && o.la < 35.27 && o.lo > 126.64 && o.lo < 127.03;
+for (const o of seen.values()) {
+  if (!o.r && o.c && JEONNAM.includes(o.c)) o.r = '전남';
+  if (!o.r && (o.c === '광산구' || (o.la && inGwangju(o)))) o.r = '광주';
+}
 // 그래도 도나 시·군을 모르면 좌표로 주소를 찾아 봅니다(Nominatim, 1초에 한 번, 한 번 실행에 최대 300곳).
 let asked = 0;
 for (const o of seen.values()) {
@@ -160,7 +167,8 @@ for (const o of seen.values()) {
   try {
     const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=10&accept-language=ko&lat=${o.la}&lon=${o.lo}`,
       { headers: { 'user-agent': 'HappyCaddy/1.0 (github.com/kimgwinil/happy-caddy)' }, signal: AbortSignal.timeout(20000) });
-    const a = (await r.json()).address || {};
+    const j = await r.json(), a = j.address || {};
+    if (asked === 1) console.log('reverse sample', r.status, JSON.stringify(j).slice(0, 300));
     const vals = Object.values(a).map(clean);
     const prov = vals.map(v => PROV_FULL[v] || PROV_FULL[v.replace(/\s/g, '')]).find(Boolean);
     const city = [a.county, a.city, a.town, a.municipality, a.borough, a.city_district].map(clean)
