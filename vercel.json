@@ -1,13 +1,7 @@
 {
  "functions": {
-  "api/courses.js": {
-   "maxDuration": 60
-  },
   "api/photo.js": {
    "maxDuration": 20
-  },
-  "api/ping.js": {
-   "maxDuration": 60
   }
  },
  "headers": [

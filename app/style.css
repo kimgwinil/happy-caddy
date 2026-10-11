@@ -20,7 +20,7 @@ h2{font-size:1.15rem;margin:0}
 .sub{color:var(--muted);font-size:.95rem;margin:0}
 .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:12px}
 .lbl{font-size:.95rem;color:var(--muted);font-weight:700}
-input[type=text],input[type=number]{width:100%;font:inherit;font-size:1.1rem;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--ink);min-height:52px}
+input[type=text],input[type=number],input[type=search],input[type=url]{width:100%;font:inherit;font-size:1.1rem;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--ink);min-height:52px}
 input:focus-visible,button:focus-visible{outline:3px solid var(--flag);outline-offset:2px}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .chips{display:flex;flex-wrap:wrap;gap:8px}
@@ -129,9 +129,6 @@ tr.tot td{font-weight:800;border-bottom:0}
 .tabs div{display:flex;max-width:560px;width:100%}
 .tabs button{flex:1;font:inherit;font-size:1rem;border:0;background:none;color:var(--muted);padding:16px 0;cursor:pointer}
 .tabs button.on{color:var(--green);font-weight:800;box-shadow:inset 0 4px 0 var(--flag)}
-.photoRow{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-.filebtn{position:relative;overflow:hidden}
-.filebtn input{position:absolute;inset:0;opacity:0;cursor:pointer}
 #print{display:none}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 @media (max-width:380px){body{font-size:17px}.step button{width:48px;height:48px}.pars,.holes{gap:3px}}
@@ -148,3 +145,22 @@ tr.tot td{font-weight:800;border-bottom:0}
   #print td .m{color:#000}
   #print .neg{color:#000!important}
 }
+/* 골프장 검색 · 코스 등록 */
+.clubres{display:flex;flex-direction:column;gap:6px}
+.clubhit{font:inherit;font-size:1.1rem;text-align:left;display:flex;align-items:baseline;gap:10px;padding:12px 14px;min-height:52px;border:1px solid var(--line);border-radius:12px;background:var(--bg);color:var(--ink);cursor:pointer}
+.clubhit b{flex:1;word-break:keep-all}
+.clubhit small{color:var(--muted);font-size:.9rem;flex:none}
+.clubhit.new{color:var(--green);font-weight:700;border-style:dashed}
+.clubnow{display:flex;flex-direction:column;gap:2px}
+.clubnow b{font-size:1.35rem}
+.clubnow span{color:var(--muted)}
+.crow{display:grid;grid-template-columns:1fr auto;gap:6px 10px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
+.crow .parstrip{grid-column:1/-1;grid-row:2}
+.cname{font:inherit;font-size:1.15rem;font-weight:700;text-align:left;background:none;border:0;color:var(--ink);padding:6px 0;cursor:pointer;text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:4px}
+.parstrip{display:flex;gap:3px;align-items:center;font-family:var(--mono);flex-wrap:wrap}
+.parstrip i{font-style:normal;min-width:1.6em;text-align:center;padding:2px 0;border-radius:6px;background:var(--bg);border:1px solid var(--line)}
+.parstrip i.p3{color:var(--green)} .parstrip i.p5{color:var(--flag)}
+.parstrip em{font-style:normal;font-weight:700;margin-left:6px}
+.pars.nine .par{padding:8px 0}
+.pars.nine .par b{font-size:1.4rem}
+.chip.small{min-height:40px;padding:6px 14px}

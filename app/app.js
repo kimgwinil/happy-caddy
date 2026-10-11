@@ -11,7 +11,10 @@
  *  - 캐디 없음: 모든 버디가 '독식 + 3명에게 각 1천원'.
  *  - 18홀 후 남는 2만원은 4명이 5천원씩 나눈다.
  */
-const KEY = 'happycaddy.v1', PHOTO_KEY = 'happycaddy.photo', COURSES_KEY = 'happycaddy.courses', LANG_KEY = 'happycaddy.lang';
+const KEY = 'happycaddy.v1', LANG_KEY = 'happycaddy.lang';
+const CLUBS_KEY = 'happycaddy.clubs', CLUBLIST_KEY = 'happycaddy.clublist';
+const WEB = 'https://happy-caddy.vercel.app/app/', API = 'https://happy-caddy.vercel.app/api';
+const DEF_NINE = [4, 4, 3, 5, 4, 4, 3, 4, 5];
 const DEF_PARS = [4,4,3,5,4,4,3,4,5,4,4,3,5,4,4,3,4,5];
 const BASE = { dep: 50000, pot: 10000, rank: [4000, 3000, 2000, 1000], k: 1000 };
 const UNITS = [1, 2, 4, 8];            // 5만 → 10만 → 20만 → 40만 (2배수)
@@ -23,14 +26,35 @@ const LOCALE = { ko: 'ko-KR', en: 'en-US', ja: 'ja-JP', zh: 'zh-CN' };
 const T = {
   sub: ['4인 · 18홀 · 해피게임', '4 players · 18 holes · Happy Game', '4人・18ホール・ハッピーゲーム', '4人·18洞·快乐游戏'],
   course: ['골프장', 'Golf course', 'ゴルフ場', '球场'],
-  coursePh: ['골프장 이름 (예: 레이크사이드 서코스)', 'Course name', 'ゴルフ場名', '球场名称'],
-  photo: ['배경 사진 고르기', 'Choose background photo', '背景写真を選ぶ', '选择背景照片'],
-  photoDel: ['사진 지우기', 'Remove photo', '写真を削除', '删除照片'],
-  photoHelp: ['골프장 사진을 고르면 첫 화면 배경으로 나옵니다.', 'Pick a photo of the course for the home screen.', 'ゴルフ場の写真が最初の画面の背景になります。', '所选球场照片将作为首页背景。'],
-  saved: ['저장한 골프장', 'Saved courses', '保存したゴルフ場', '已保存球场'],
-  saveCourse: ['이 골프장 파 저장', "Save this course's pars", 'このコースのパーを保存', '保存此球场标准杆'],
+  clubPh: ['골프장 이름 검색 (예: 스카이힐)', 'Search golf club (e.g. Sky Hill)', 'ゴルフ場名で検索', '搜索球场名称'],
+  clubHelp: ['이름 일부만 넣어도 전국 골프장에서 찾아 줍니다.', 'Type part of the name to search clubs across Korea.', '名前の一部で全国のゴルフ場を検索します。', '输入部分名称即可搜索全国球场。'],
+  clubNew: ['"{x}" 새 골프장으로 등록', 'Add "{x}" as a new club', '「{x}」を新しく登録', '将“{x}”登记为新球场'],
+  clubLoading: ['전국 골프장 목록을 불러오는 중…', 'Loading golf clubs…', 'ゴルフ場一覧を読み込み中…', '正在加载球场列表…'],
+  clubOffline: ['목록을 불러오지 못했어요. 이름을 넣고 새로 등록할 수 있습니다.', 'Could not load the list. You can still add a club by name.', '一覧を読み込めません。名前を入れて登録できます。', '无法加载列表，可输入名称新登记。'],
+  clubNone: ['찾는 골프장이 없습니다.', 'No match.', '見つかりません。', '没有找到。'],
+  recent: ['최근 골프장', 'Recent clubs', '最近のゴルフ場', '最近的球场'],
+  clubChange: ['골프장 바꾸기', 'Change club', 'ゴルフ場を変更', '更换球场'],
+  clubEdit: ['코스 등록·선택', 'Register / pick courses', 'コース登録・選択', '登记/选择球道'],
+  site: ['골프장 홈페이지', 'Club homepage', 'ゴルフ場ホームページ', '球场主页'],
+  sitePh: ['예: www.skyhill.co.kr', 'e.g. www.example-cc.co.kr', '例: www.example-cc.co.kr', '例: www.example-cc.co.kr'],
+  siteHelp: ['홈페이지 첫 화면의 사진이 배경으로 나옵니다. 사진은 저장하지 않고 홈페이지에서 바로 불러옵니다.', "The homepage's main photo becomes the background. It is loaded from the club's site, not copied.", 'ホームページのメイン写真が背景になります（コピーせず直接読み込み）。', '主页首图将作为背景（直接从主页加载，不复制）。'],
+  noPhoto: ['홈페이지에서 사진을 찾지 못했습니다.', 'No photo found on the homepage.', 'ホームページに写真が見つかりません。', '主页上没有找到照片。'],
+  coursesReg: ['등록된 코스', 'Registered courses', '登録済みコース', '已登记球道'],
+  noCourses: ['아직 등록된 코스가 없습니다. 아래에서 9홀씩 추가하세요.', 'No courses yet. Add them below, 9 holes each.', 'まだコースがありません。下で9ホールずつ追加してください。', '还没有球道，请在下方按9洞添加。'],
+  addCourse: ['코스 추가 (9홀)', 'Add a course (9 holes)', 'コース追加（9ホール）', '添加球道（9洞）'],
+  editCourse: ['코스 고치기', 'Edit course', 'コース修正', '修改球道'],
+  cnamePh: ['코스 이름 (예: 동코스, OUT)', 'Course name (e.g. East, OUT)', 'コース名（例: 東、OUT）', '球道名称（例: 东、OUT）'],
+  saveC: ['이 코스 저장', 'Save course', 'コースを保存', '保存球道'],
+  delC: ['삭제', 'Delete', '削除', '删除'],
+  delSure: ['한 번 더 누르면 삭제', 'Tap again to delete', 'もう一度押すと削除', '再点一次删除'],
+  front: ['전반 9홀', 'Front 9', '前半9ホール', '前9洞'],
+  back9: ['후반 9홀', 'Back 9', '後半9ホール', '后9洞'],
+  todayC: ['오늘 칠 코스', "Today's courses", '今日のコース', '今天打的球道'],
+  useCourses: ['이 코스로 정하기', 'Use these courses', 'このコースで決定', '确定球道'],
+  pickBoth: ['전반과 후반 코스를 골라 주세요', 'Pick the front and back courses', '前半と後半のコースを選んでください', '请选择前9洞和后9洞'],
+  needCname: ['코스 이름을 넣어 주세요', 'Enter a course name', 'コース名を入力してください', '请输入球道名称'],
   savedOk: ['저장했어요', 'Saved', '保存しました', '已保存'],
-  needName: ['골프장 이름을 먼저 넣어 주세요', 'Enter the course name first', 'ゴルフ場名を先に入力してください', '请先输入球场名称'],
+  toSetup: ['← 돌아가기', '← Back', '← 戻る', '← 返回'],
   players: ['동반자 이름 (4명)', 'Players (4)', 'プレーヤー名（4人）', '球友姓名（4人）'],
   playersHelp: ['이름을 넣거나 🎲를 눌러 닉네임을 고르세요.', 'Type a name, or tap 🎲 for a nickname.', '名前を入力するか🎲でニックネームを選んでください。', '输入姓名，或点🎲选择昵称。'],
   holder: ['게임비 보관하는 분', 'Who holds the money', 'お金の預かり役', '保管人'],
@@ -155,6 +179,7 @@ function fresh(prev) {
     players: prev ? prev.players.slice() : ['', '', '', ''], holder: prev ? prev.holder : 0,
     mode: prev ? prev.mode : 'caddie', unit: prev ? prev.unit : 1, caddieFee: prev ? prev.caddieFee : 0,
     course: prev ? prev.course : '', pars: prev ? prev.pars.slice() : DEF_PARS.slice(),
+    club: prev ? prev.club || '' : '', front: prev ? prev.front || '' : '', back: prev ? prev.back || '' : '', site: prev ? prev.site || '' : '',
     order0: null, scores: Array(18).fill(null), done: Array(18).fill(false), cur: 0, tab: 'hole',
   };
 }
@@ -230,13 +255,74 @@ function settlement(C) {
 }
 
 /* ---------- 화면 ---------- */
-function photoCss() { const p = !VIEW && ls.get(PHOTO_KEY); return p ? ` style="--hero:url('${p}')"` : ''; }
+/* ---------- 골프장 · 코스 ---------- */
+// 내가 등록한 골프장: { 이름: { w: 홈페이지, r: 지역, cs: [{ n: 코스이름, p: [9홀 파] }], at: 마지막 사용 } }
+function clubs() { try { return JSON.parse(ls.get(CLUBS_KEY)) || {}; } catch (e) { return {}; } }
+function saveClubs(o) { ls.set(CLUBS_KEY, JSON.stringify(o)); }
+function club(name = S.club) { const o = clubs(); return o[name] || null; }
+function putClub(name, patch) { const o = clubs(); o[name] = Object.assign({ w: '', r: '', cs: [] }, o[name], patch, { at: Date.now() }); saveClubs(o); return o[name]; }
+function siteOf(name = S.club) { const c = club(name); return (c && c.w) || (name === S.club ? S.site : '') || ''; }
+// 배경: 등록한 골프장의 홈페이지 첫 화면 사진만 씁니다(서버가 주소만 찾아 주고, 사진은 홈페이지에서 직접 불러옴).
+function photoCss() { const w = S.club ? siteOf() : VIEW ? S.site : ''; return w ? ` style="--hero:url('${API}/photo?site=${encodeURIComponent(w)}')"` : ''; }
+function courseLabel() { return S.club ? S.club + (S.front && S.back ? ' · ' + (S.front === S.back ? S.front : S.front + '→' + S.back) : '') : ''; }
+
+// 전국 골프장 목록 (OpenStreetMap 기반 data/clubs.json, 기기에 30일 보관)
+let CLUBLIST = null, CLUBLIST_ERR = false, clubQ = '';
+function clubList() {
+  if (CLUBLIST) return CLUBLIST;
+  try { const c = JSON.parse(ls.get(CLUBLIST_KEY)); if (c && c.list && c.list.length) { CLUBLIST = c.list; if (Date.now() - c.got < 30 * 864e5) return CLUBLIST; } } catch (e) {}
+  if (!clubList.busy) {
+    clubList.busy = true;
+    const get = u => fetch(u).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); });
+    get('data/clubs.json').catch(() => get(WEB + 'data/clubs.json')).then(d => {
+      if (d.list && d.list.length) { CLUBLIST = d.list; ls.set(CLUBLIST_KEY, JSON.stringify({ got: Date.now(), list: d.list })); }
+      else if (!CLUBLIST) CLUBLIST_ERR = true;
+    }).catch(() => { if (!CLUBLIST) CLUBLIST_ERR = true; }).finally(() => { clubList.busy = false; refreshClubRes(); });
+  }
+  return CLUBLIST;
+}
+const norm = s => String(s).toLowerCase().replace(/\s|\(.*?\)|골프클럽|골프장|컨트리클럽|골프앤리조트|골프&리조트|cc$|c\.c\.?$|gc$|g\.c\.?$/g, '');
+function searchClubs(q) {
+  const n = norm(q); if (!n) return [];
+  const mine = Object.keys(clubs()).map(k => ({ n: k, r: clubs()[k].r, mine: true }));
+  const all = mine.concat((clubList() || []).filter(c => !clubs()[c.n]));
+  const hit = all.filter(c => norm(c.n).includes(n) || (c.en && norm(c.en).includes(n)));
+  hit.sort((a, b) => (b.mine ? 1 : 0) - (a.mine ? 1 : 0) || (norm(a.n).startsWith(n) ? 0 : 1) - (norm(b.n).startsWith(n) ? 0 : 1) || a.n.length - b.n.length);
+  return hit.slice(0, 8);
+}
+function clubResHtml() {
+  const q = clubQ.trim();
+  if (!q) return '';
+  const list = clubList(), hits = searchClubs(q);
+  const head = !list && !CLUBLIST_ERR ? `<p class="sub">${t('clubLoading')}</p>` : !list && CLUBLIST_ERR ? `<p class="sub">${t('clubOffline')}</p>` : !hits.length ? `<p class="sub">${t('clubNone')}</p>` : '';
+  const exact = hits.some(h => norm(h.n) === norm(q));
+  return head + `<div class="clubres">${hits.map(h => `<button class="clubhit" data-act="clubPick" data-n="${esc(h.n)}"><b>${esc(h.n)}</b>${h.r ? `<small>${esc(h.r)}</small>` : ''}${h.mine ? '<small>⭐</small>' : ''}</button>`).join('')}
+    ${exact ? '' : `<button class="clubhit new" data-act="clubPick" data-n="${esc(q)}">➕ ${esc(t('clubNew', { x: q }))}</button>`}</div>`;
+}
+function refreshClubRes() { const el = document.getElementById('clubRes'); if (el) el.innerHTML = clubResHtml(); }
+function pickClub(name) {
+  name = String(name).trim().slice(0, 40); if (!name) return;
+  const known = (clubList() || []).find(c => c.n === name), mine = club(name);
+  putClub(name, { w: (mine && mine.w) || (known && known.w) || '', r: (mine && mine.r) || (known && known.r) || '' });
+  S.club = name; S.site = siteOf(name); S.front = S.back = ''; S.course = name; clubQ = '';
+  const cs = club(name).cs; if (cs.length === 1) S.front = S.back = cs[0].n; else if (cs.length >= 2) { S.front = cs[0].n; S.back = cs[1].n; }
+  DRAFT = null; S.phase = 'club';
+}
+function applyCourses() {
+  const c = club(); if (!c) return false;
+  const f = c.cs.find(x => x.n === S.front), b = c.cs.find(x => x.n === S.back);
+  if (!f || !b) return false;
+  S.pars = f.p.concat(b.p); S.course = courseLabel(); return true;
+}
+let DRAFT = null;   // 코스 추가·수정 중인 내용 { n, p[9], old }
 function hero(slim, extra = '') {
   const langs = `<div class="langs">${LANGS.map(l => `<button class="${l === LANG ? 'on' : ''}" data-act="lang" data-v="${l}" aria-label="${l}">${LANG_BTN[l]}</button>`).join('')}</div>`;
   return `<header class="hero ${slim ? 'slim' : ''}"${slim ? '' : photoCss()}>${langs}
     <div class="brand"><img src="icons/icon-192.png" alt="">HAPPY <span>CADDY</span></div>
     <div class="date">${esc(fmtDate(S.date))}</div>
     <div class="course">${esc(S.course || t('sub'))}${S.course ? ' · ' + esc(t('sub')) : ''}</div>${extra}</header>`;
+}
+function parStrip(p) { return `<span class="parstrip">${p.map(x => `<i class="p${x}">${x}</i>`).join('')}<em>${p.reduce((a, b) => a + b, 0)}</em></span>`;
 }
 function rulesList() {
   const A = amt();
@@ -246,7 +332,6 @@ function rulesList() {
   items.push(t('rBTie'), t('rLeft', { left: short(A.left), each: short(A.left / 4) }));
   return `<ul class="rules">${items.map(x => `<li>${esc(x)}</li>`).join('')}</ul>`;
 }
-function courses() { try { return JSON.parse(ls.get(COURSES_KEY)) || []; } catch (e) { return []; } }
 
 const IN_KAKAO = /KAKAOTALK/i.test(navigator.userAgent) && !window.HappyCaddyNative;
 function kakaoCard() {
@@ -254,7 +339,6 @@ function kakaoCard() {
 }
 function vSetup() {
   if (!VIEW) S.date = today();
-  const cs = courses();
   const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   const isMacSafari = /Macintosh/.test(navigator.userAgent) && /Safari/.test(navigator.userAgent) && !/Chrome|Edg/.test(navigator.userAgent) && !isIOS;
   const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone;
@@ -263,13 +347,11 @@ function vSetup() {
     <p class="sub">${esc(isIOS ? t('installIOS') : isMacSafari ? t('installMac') : t('installOther'))}</p></section>`;
   return hero(false) + kakaoCard() + `
   <section class="card"><span class="lbl">${t('course')}</span>
-    <input type="text" data-in="course" value="${esc(S.course)}" placeholder="${esc(t('coursePh'))}" maxlength="30">
-    <div class="photoRow">
-      <label class="btn ghost small filebtn">📷 ${t('photo')}<input type="file" accept="image/*" data-in="photo"></label>
-      ${ls.get(PHOTO_KEY) ? `<button class="btn ghost small" data-act="photoDel">${t('photoDel')}</button>` : ''}
-    </div>
-    <p class="sub">${t('photoHelp')}</p>
-    ${cs.length ? `<span class="lbl">${t('saved')}</span><div class="chips">${cs.map((c, i) => `<button class="chip ${c.name === S.course ? 'on' : ''}" data-act="loadCourse" data-v="${i}">${esc(c.name)}</button>`).join('')}</div>` : ''}
+    ${S.club ? `<div class="clubnow"><b>${esc(S.club)}</b>${S.front && S.back ? `<span>${esc(t('front'))}: ${esc(S.front)} · ${esc(t('back9'))}: ${esc(S.back)}</span>` : ''}</div>
+    <div class="row"><button class="btn small" data-act="clubOpen">⛳ ${t('clubEdit')}</button><button class="btn ghost small" data-act="clubClear">${t('clubChange')}</button></div>`
+    : `<input type="search" data-in="clubq" value="${esc(clubQ)}" placeholder="${esc(t('clubPh'))}" maxlength="40" autocomplete="off" enterkeyhint="search">
+    <p class="sub">${t('clubHelp')}</p><div id="clubRes">${clubResHtml()}</div>
+    ${recentClubs()}`}
   </section>
   <section class="card"><span class="lbl">${t('players')}</span>
     <p class="sub">${t('playersHelp')}</p>
@@ -289,11 +371,48 @@ function vSetup() {
   </section>
   <section class="card"><span class="lbl">${t('pars')}</span>
     <div class="pars">${S.pars.map((p, h) => `<button class="par p${p}" data-act="par" data-v="${h}"><small>${h + 1}</small><b>${p}</b></button>`).join('')}</div>
-    <div class="row" style="align-items:center"><p class="sub">${t('parTotal', { x: S.pars.reduce((a, b) => a + b, 0) })}</p>
-    <button class="btn ghost small" data-act="saveCourse">💾 ${t('saveCourse')}</button></div>
+    <p class="sub">${t('parTotal', { x: S.pars.reduce((a, b) => a + b, 0) })}</p>
   </section>
   <button class="btn" data-act="toDraw">${t('toDraw')}</button>
   ${installCard}`;
+}
+
+function recentClubs() {
+  const o = clubs(), names = Object.keys(o).sort((a, b) => (o[b].at || 0) - (o[a].at || 0)).slice(0, 6);
+  return names.length ? `<span class="lbl">${t('recent')}</span><div class="chips">${names.map(n => `<button class="chip" data-act="clubPick" data-n="${esc(n)}">${esc(n)}</button>`).join('')}</div>` : '';
+}
+function vClub() {
+  const c = club() || { w: '', r: '', cs: [] };
+  if (!DRAFT) DRAFT = { n: '', p: DEF_NINE.slice(), old: null };
+  const quick = ['동', '서', '남', '북', 'OUT', 'IN'].map(x => /^[A-Z]/.test(x) ? x : x + (LANG === 'ko' ? '코스' : ''));
+  const pick = (which, cur) => `<div class="chips">${c.cs.map(x => `<button class="chip ${cur === x.n ? 'on' : ''}" data-act="${which}" data-n="${esc(x.n)}">${esc(x.n)}</button>`).join('')}</div>`;
+  return hero(false) + `
+  <section class="card"><div class="clubnow"><b>${esc(S.club)}</b>${c.r ? `<span>${esc(c.r)}</span>` : ''}</div>
+    <label><span class="lbl">${t('site')}</span><input type="url" inputmode="url" data-in="site" value="${esc(c.w)}" placeholder="${esc(t('sitePh'))}" maxlength="120" autocomplete="off"></label>
+    <p class="sub">${t('siteHelp')}</p><p class="sub" id="photoNote"></p></section>
+  <section class="card"><span class="lbl">${t('coursesReg')}</span>
+    ${c.cs.length ? c.cs.map((x, i) => `<div class="crow"><button class="cname" data-act="cEdit" data-v="${i}">${esc(x.n)}</button>${parStrip(x.p)}
+      <button class="btn ghost small" data-act="cDel" data-v="${i}">${armed === 'cDel' + i ? t('delSure') : t('delC')}</button></div>`).join('') : `<p class="sub">${t('noCourses')}</p>`}
+  </section>
+  <section class="card" id="draft"><span class="lbl">${DRAFT.old != null ? t('editCourse') : t('addCourse')}</span>
+    <input type="text" data-in="cname" value="${esc(DRAFT.n)}" placeholder="${esc(t('cnamePh'))}" maxlength="16">
+    <div class="chips">${quick.map(q => `<button class="chip small" data-act="cQuick" data-n="${esc(q)}">${esc(q)}</button>`).join('')}</div>
+    <span class="lbl">${t('pars')}</span>
+    <div class="pars nine">${DRAFT.p.map((p, h) => `<button class="par p${p}" data-act="dpar" data-v="${h}"><small>${h + 1}</small><b>${p}</b></button>`).join('')}</div>
+    <p class="sub">${t('parTotal', { x: DRAFT.p.reduce((a, b) => a + b, 0) })}</p>
+    <button class="btn" data-act="cSave">💾 ${t('saveC')}</button>
+  </section>
+  ${c.cs.length ? `<section class="card"><span class="lbl">${t('todayC')}</span>
+    <span class="lbl">${t('front')}</span>${pick('cFront', S.front)}
+    <span class="lbl">${t('back9')}</span>${pick('cBack', S.back)}
+    ${S.front && S.back ? parStrip(c.cs.find(x => x.n === S.front).p.concat(c.cs.find(x => x.n === S.back).p)) : ''}
+  </section>
+  <button class="btn" data-act="cUse">${t('useCourses')}</button>` : ''}
+  <button class="btn ghost" data-act="back">${t('toSetup')}</button>`;
+}
+function checkPhoto() {
+  const w = siteOf(), el = document.getElementById('photoNote'); if (!w || !el) return;
+  fetch(API + '/photo?json=1&site=' + encodeURIComponent(w)).then(r => r.json()).then(d => { const e2 = document.getElementById('photoNote'); if (e2) e2.textContent = d.img ? '' : t('noPhoto'); }).catch(() => {});
 }
 
 function slots(ord) { return [0, 1, 2, 3].map(i => ord[i] == null ? `<div class="slot empty"><span class="n">${i + 1}</span>…</div>` : `<div class="slot"><span class="n">${i + 1}</span>${esc(nm(ord[i]))}</div>`).join(''); }
@@ -408,7 +527,7 @@ const NATIVE = window.HappyCaddyNative || null;          // 안드로이드 앱 
 const IS_WEB = /^https?:$/.test(location.protocol);
 const IS_APP = !!NATIVE || /Electron/i.test(navigator.userAgent);
 function shareCode() {
-  const o = { c: S.code, d: S.date, n: S.course, p: S.players, h: S.holder, m: S.mode === 'caddie' ? 1 : 0, u: S.unit, f: S.caddieFee || 0, a: S.pars.join(''), o: S.order0,
+  const o = { c: S.code, d: S.date, n: S.course, w: S.site || undefined, p: S.players, h: S.holder, m: S.mode === 'caddie' ? 1 : 0, u: S.unit, f: S.caddieFee || 0, a: S.pars.join(''), o: S.order0,
     s: S.scores.map((x, i) => S.done[i] && x ? x : 0) };
   return b64urlEncode(JSON.stringify(o));
 }
@@ -427,7 +546,7 @@ function resultText() {
 function readShared(code) {
   const o = JSON.parse(b64urlDecode(code));
   const s = fresh(); s.code = o.c; s.date = o.d; s.course = o.n || ''; s.players = o.p; s.holder = o.h; s.mode = o.m ? 'caddie' : 'nocaddie';
-  s.unit = o.u; s.caddieFee = o.f; s.pars = o.a.split('').map(Number); s.order0 = o.o; s.phase = 'play'; s.tab = 'card';
+  s.site = o.w || ''; s.unit = o.u; s.caddieFee = o.f; s.pars = o.a.split('').map(Number); s.order0 = o.o; s.phase = 'play'; s.tab = 'card';
   s.scores = o.s.map(x => x || null); s.done = o.s.map(x => !!x);
   return s;
 }
@@ -477,9 +596,11 @@ function printView() {
 function render() {
   document.documentElement.lang = LANG;
   const app = document.getElementById('app'), tabs = document.getElementById('tabs');
+  if (S.phase === 'club' && (VIEW || !S.club)) S.phase = 'setup';
   tabs.hidden = S.phase !== 'play';
   if (S.phase === 'setup') app.innerHTML = vSetup();
   else if (S.phase === 'draw') app.innerHTML = vDraw();
+  else if (S.phase === 'club') { app.innerHTML = vClub(); checkPhoto(); }
   else {
     const list = VIEW ? ['card', 'set'] : ['hole', 'card', 'set', 'share'];
     if (!list.includes(S.tab)) S.tab = list[0];
@@ -492,32 +613,23 @@ function toast(msg) {
   let el = document.querySelector('.toast'); if (!el) { el = document.createElement('div'); el.className = 'toast'; document.body.appendChild(el); }
   el.textContent = msg; el.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => el.hidden = true, 1800);
 }
-function resizePhoto(file) {
-  const img = new Image(), url = URL.createObjectURL(file);
-  img.onload = () => {
-    const max = 1280, s = Math.min(1, max / Math.max(img.width, img.height));
-    const c = document.createElement('canvas'); c.width = Math.round(img.width * s); c.height = Math.round(img.height * s);
-    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url);
-    if (!ls.set(PHOTO_KEY, c.toDataURL('image/jpeg', 0.8))) ls.set(PHOTO_KEY, c.toDataURL('image/jpeg', 0.5));
-    render();
-  };
-  img.src = url;
-}
-
 document.addEventListener('input', e => {
   const k = e.target.dataset.in; if (!k || VIEW) return;
   if (k === 'name') { S.players[+e.target.dataset.i] = e.target.value.trim(); save(); document.querySelectorAll('[data-act=holder]').forEach((b, i) => b.textContent = nm(i)); }
-  else if (k === 'course') { S.course = e.target.value.trim(); save(); }
+  else if (k === 'clubq') { clubQ = e.target.value; refreshClubRes(); }
+  else if (k === 'cname') { DRAFT.n = e.target.value.trim(); }
   else if (k === 'caddieFee') { S.caddieFee = Math.max(0, parseInt(e.target.value) || 0); save(); const o = document.getElementById('feeOut'); if (o) o.textContent = S.caddieFee ? t('perPerson', { x: money(S.caddieFee / 4) }) : ''; }
 });
 document.addEventListener('change', e => {
   const k = e.target.dataset.in;
-  if (k === 'photo' && e.target.files[0]) resizePhoto(e.target.files[0]);
-  if (k === 'course') render();
+  if (k === 'site') {
+    let w = e.target.value.trim().replace(/\s/g, ''); if (w && !/^https?:\/\//i.test(w)) w = 'https://' + w;
+    putClub(S.club, { w }); S.site = w; save(); render();
+  }
 });
 document.addEventListener('click', async e => {
   const b = e.target.closest('[data-act]'); if (!b) return;
-  const a = b.dataset.act, v = +b.dataset.v; if (a !== 'reset') armed = null;
+  const a = b.dataset.act, v = +b.dataset.v; if (a !== 'reset' && a !== 'cDel') armed = null;
   switch (a) {
     case 'lang': LANG = b.dataset.v; ls.set(LANG_KEY, LANG); break;
     case 'holder': S.holder = v; break;
@@ -526,14 +638,35 @@ document.addEventListener('click', async e => {
     case 'nick': { const used = new Set(S.players), pool = NICKS[LANG].filter(x => !used.has(x)); S.players[v] = pool[Math.floor(Math.random() * pool.length)]; break; }
     case 'par': S.pars[v] = S.pars[v] === 5 ? 3 : S.pars[v] + 1; break;
     case 'parHere': if (VIEW) return; S.pars[S.cur] = S.pars[S.cur] === 5 ? 3 : S.pars[S.cur] + 1; break;
-    case 'photoDel': ls.del(PHOTO_KEY); break;
-    case 'saveCourse': {
-      if (!S.course) { toast(t('needName')); return; }
-      const cs = courses().filter(c => c.name !== S.course); cs.unshift({ name: S.course, pars: S.pars.slice() }); ls.set(COURSES_KEY, JSON.stringify(cs.slice(0, 20))); toast(t('savedOk')); break;
+    case 'clubPick': pickClub(b.dataset.n); break;
+    case 'clubOpen': DRAFT = null; S.phase = 'club'; break;
+    case 'clubClear': S.club = S.front = S.back = S.site = ''; S.course = ''; clubQ = ''; break;
+    case 'dpar': DRAFT.p[v] = DRAFT.p[v] === 5 ? 3 : DRAFT.p[v] + 1; break;
+    case 'cQuick': DRAFT.n = b.dataset.n; break;
+    case 'cEdit': { const x = club().cs[v]; DRAFT = { n: x.n, p: x.p.slice(), old: v }; save(); render(); document.getElementById('draft').scrollIntoView({ block: 'start' }); return; }
+    case 'cDel': {
+      if (armed !== 'cDel' + v) { armed = 'cDel' + v; render(); return; }
+      const c = club(), gone = c.cs[v].n; c.cs.splice(v, 1); putClub(S.club, { cs: c.cs });
+      if (S.front === gone) S.front = ''; if (S.back === gone) S.back = ''; armed = null; DRAFT = null; break;
     }
-    case 'loadCourse': { const c = courses()[v]; if (c) { S.course = c.name; S.pars = c.pars.slice(); } break; }
+    case 'cSave': {
+      const inp = document.querySelector('[data-in=cname]'); if (inp) DRAFT.n = inp.value.trim();
+      if (!DRAFT.n) { toast(t('needCname')); return; }
+      const c = club(), cs = c.cs.slice(), item = { n: DRAFT.n, p: DRAFT.p.slice() };
+      const oldName = DRAFT.old != null && cs[DRAFT.old] ? cs[DRAFT.old].n : null;
+      const same = cs.findIndex(x => x.n === item.n);
+      if (DRAFT.old != null && cs[DRAFT.old]) { cs[DRAFT.old] = item; if (same >= 0 && same !== DRAFT.old) cs.splice(same, 1); }
+      else if (same >= 0) cs[same] = item; else cs.push(item);
+      putClub(S.club, { cs });
+      if (oldName) { if (S.front === oldName) S.front = item.n; if (S.back === oldName) S.back = item.n; }
+      if (!S.front) S.front = item.n; else if (!S.back) S.back = item.n;
+      DRAFT = null; toast(t('savedOk')); break;
+    }
+    case 'cFront': S.front = b.dataset.n; break;
+    case 'cBack': S.back = b.dataset.n; break;
+    case 'cUse': if (!applyCourses()) { toast(t('pickBoth')); return; } S.phase = 'setup'; break;
     case 'toDraw': S.phase = 'draw'; manual = null; break;
-    case 'back': S.phase = 'setup'; manual = null; break;
+    case 'back': if (S.phase === 'club') applyCourses(); S.phase = 'setup'; manual = null; DRAFT = null; break;
     case 'spin': spin(); return;
     case 'pick': manual = manual || []; if (!manual.includes(v)) manual.push(v); if (manual.length === 4) { S.order0 = manual.slice(); } break;
     case 'clearPick': manual = []; break;
@@ -561,7 +694,7 @@ document.addEventListener('click', async e => {
     case 'openExternal': location.href = 'kakaotalk://web/openExternal?url=' + encodeURIComponent(location.href); return;
     case 'exitView': VIEW = false; try { history.replaceState(null, '', location.pathname); } catch (err) {} S = load() || fresh(); break;
   }
-  save(); render(); if (!['inc', 'dec', 'par', 'holder', 'parHere', 'nick', 'pick', 'lang', 'mode', 'unit'].includes(a)) window.scrollTo(0, 0);
+  save(); render(); if (!['inc', 'dec', 'par', 'holder', 'parHere', 'nick', 'pick', 'lang', 'mode', 'unit', 'dpar', 'cQuick', 'cFront', 'cBack', 'cDel'].includes(a)) window.scrollTo(0, 0);
 });
 window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; if (S.phase === 'setup') render(); });
 

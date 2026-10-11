@@ -11,7 +11,9 @@ foreach.provs->.p(
   nwr[leisure=golf_course](area.p);
   out center tags;
 );`;
-const SKIP = /파크\s*골프|park\s*golf|그라운드\s*골프|미니\s*골프|mini\s*golf|연습장|driving|스크린|게이트볼/i;
+const SKIP = /파크\s*골프|park\s*golf|그라운드\s*골프|미니\s*골프|mini\s*golf|연습장|driving|스크린|게이트볼|골프존\s*파크|아카데미|academy|스튜디오|studio|레슨|^골프장$|^[A-Z0-9]{3,5}$/i;
+// 코스 하나만 따로 표시된 것(예: 'HILL Course', '파인코스')은 골프장이 아니므로 뺍니다.
+const PART = s => /(코스|course)$/i.test(s) && s.replace(/\s/g, '').length <= 10 && !/(CC|GC|골프|컨트리|클럽|리조트)/i.test(s);
 const PROV = { 'KR-11': '서울', 'KR-26': '부산', 'KR-27': '대구', 'KR-28': '인천', 'KR-29': '광주', 'KR-30': '대전', 'KR-31': '울산', 'KR-50': '세종',
   'KR-41': '경기', 'KR-42': '강원', 'KR-51': '강원', 'KR-43': '충북', 'KR-44': '충남', 'KR-45': '전북', 'KR-52': '전북', 'KR-46': '전남', 'KR-47': '경북', 'KR-48': '경남', 'KR-49': '제주' };
 const clean = s => (s || '').replace(/\s+/g, ' ').trim();
@@ -38,8 +40,8 @@ const seen = new Map(); let region = '';
 for (const el of data.elements) {
   const tg = el.tags || {};
   if (el.type === 'area') { region = PROV[tg['ISO3166-2']] || clean(tg['name:ko'] || tg.name); continue; }
-  const name = clean(tg['name:ko'] || tg.name);
-  if (!name || SKIP.test(name) || ['driving_range', 'miniature'].includes(tg.golf) || tg.sport === 'miniature_golf') continue;
+  const name = clean(tg['name:ko'] || tg.name).replace(/\s*클럽하우스$/, '');
+  if (!name || SKIP.test(name) || PART(name) || ['driving_range', 'miniature'].includes(tg.golf) || tg.sport === 'miniature_golf') continue;
   const site = clean(tg.website || tg['contact:website'] || tg.url);
   const key = name.replace(/\s/g, '');
   const prev = seen.get(key);

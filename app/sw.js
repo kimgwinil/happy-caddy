@@ -1,9 +1,9 @@
 // Happy Caddy 오프라인 캐시. 파일을 바꾸면 VERSION을 올려야 새 버전이 퍼집니다.
-const VERSION = 'happy-caddy-v3';
+const VERSION = 'happy-caddy-v4';
 const SHELL = [
   './', 'index.html', 'style.css', 'app.js', 'vendor/qrcode.js', 'manifest.webmanifest',
   'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/maskable-512.png',
-  'icons/apple-touch-icon.png', 'icons/favicon-32.png'
+  'icons/apple-touch-icon.png', 'icons/favicon-32.png', 'data/clubs.json'
 ];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
