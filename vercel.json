@@ -2,6 +2,9 @@
  "functions": {
   "api/photo.js": {
    "maxDuration": 20
+  },
+  "api/shared.js": {
+   "maxDuration": 15
   }
  },
  "headers": [

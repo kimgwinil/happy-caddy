@@ -1,0 +1,8 @@
+{
+  "name": "happy-caddy-site",
+  "private": true,
+  "description": "Happy Caddy 다운로드 페이지와 웹앱, 서버 기능(api/)",
+  "dependencies": {
+    "@vercel/blob": "2.8.0"
+  }
+}
